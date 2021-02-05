@@ -145,15 +145,15 @@ function tostrings.table(t)
 end
 
 function tostrings.Vector2(v)
-	return ("[%s,%s]"):format(v[1],v[2])
+	return ("[%s,%s]"):format(rawget(v, 1),rawget(v, 2))
 end
 
 function tostrings.Vector(v)
-	return ("[%s,%s,%s]"):format(v[1],v[2],v[3])
+	return ("[%s,%s,%s]"):format(rawget(v, 1),rawget(v, 2),rawget(v, 3))
 end
 
 function tostrings.Vector4(v)
-	return ("[%s,%s,%s,%s]"):format(v[1],v[2],v[3],v[4])
+	return ("[%s,%s,%s,%s]"):format(rawget(v, 1),rawget(v, 2),rawget(v, 3),rawget(v, 4))
 end
 
 -- for invert(T)
@@ -222,8 +222,8 @@ local function var_tostring( k, v, typeid, indenting, printed, abortafter, cost 
 		local ret2, cost2 = normal_table_tostring( v, indenting + 2, abortafter, cost )
 		ret = ret .. ret2
 		cost = cost2
-	elseif tostring_typeid[typeid] then -- if it's a type defined in this table
-		ret = rep("\t",indenting) .. k .. "\t=\t" .. tostring_typeid[typeid]( v ) .. "\n"
+	elseif rawget(tostring_typeid, typeid) then -- if it's a type defined in this table
+		ret = rep("\t",indenting) .. k .. "\t=\t" .. rawget(tostring_typeid, typeid)( v ) .. "\n"
 	else -- if it's anything else
 		ret = rep("\t",indenting) .. k .. "\t=\t" .. tostring(v) .. "\n"
 	end
@@ -255,18 +255,18 @@ end
 __e2setcost(5)
 
 registerOperator("ass", "t", "t", function(self, args)
-	local lhs, op2, scope = args[2], args[3], args[4]
-	local      rhs = op2[1](self, op2)
+	local lhs, op2, scope = rawget(args, 2), rawget(args, 3), rawget(args, 4)
+	local      rhs = rawget(op2, 1)(self, op2)
 
 	local Scope = self.Scopes[scope]
 	if !Scope.lookup then Scope.lookup = {} end
 
 	local lookup = Scope.lookup
-	if (lookup[rhs]) then lookup[rhs][lhs] = nil end
-	if (!lookup[rhs]) then lookup[rhs] = {} end
+	if (rawget(lookup, rhs)) then lookup[rhs][lhs] = nil end
+	if (!rawget(lookup, rhs)) then rawget(lookup, rhs) = {} end
 	lookup[rhs][lhs] = true
 
-	Scope[lhs] = rhs
+	rawset(Scope, lhs, rhs)
 	Scope.vclk[lhs] = true
 	return rhs
 end)
@@ -274,7 +274,7 @@ end)
 __e2setcost(1)
 
 e2function number operator_is( table tbl )
-	return (tbl.size > 0) and 1 or 0
+	return (rawget(tbl, "size") > 0) and 1 or 0
 end
 
 e2function number operator==( table rv1, table rv2 )
@@ -290,20 +290,20 @@ __e2setcost(nil)
 registerOperator( "kvtable", "", "t", function( self, args )
 	local ret = newE2Table()
 
-	local types = args[3]
+	local types = rawget(args, 3)
 
 	local s, stypes, n, ntypes = {}, {}, {}, {}
 
 	local size = 0
-	for k,v in pairs( args[2] ) do
+	for k,v in pairs( rawget()args, 2) ) do
 		if not blocked_types[types[k]] then
 			local key = k[1]( self, k )
 
 			if isstring(key) then
-				s[key] = v[1]( self, v )
+				s[key] = rawget(v, 1)( self, v )
 				stypes[key] = types[k]
 			elseif isnumber(key) then
-				n[key] = v[1]( self, v )
+				n[key] = rawget(v, 1)( self, v )
 				ntypes[key] = types[k]
 			end
 			size = size + 1
@@ -382,8 +382,8 @@ __e2setcost(5)
 
 e2function void printTable( table tbl )
 	if (not checkOwner(self)) then return; end
-	if (tbl.size > 200) then
-		self.player:ChatPrint("Table has more than 200 ("..tbl.size..") elements. PrintTable cancelled to prevent lag")
+	if (rawget(tbl, "size") > 200) then
+		self.player:ChatPrint("Table has more than 200 ("..rawget(tbl, "size")..") elements. PrintTable cancelled to prevent lag")
 		return
 	end
 	local printed = { [tbl] = true }
@@ -929,7 +929,7 @@ e2function table invert(table tbl)
 	for i,v in pairs(tbl.n) do
 		c = c + 1
 		local typeid = tbl.ntypes[i]
-		local tostring_this = tostring_typeid[typeid]
+		local tostring_this = rawget(tostring_typeid, typeid)
 		if tostring_this then
 			ret.s[tostring_this(v)] = i
 			ret.stypes[tostring_this(v)] = "n"
@@ -941,7 +941,7 @@ e2function table invert(table tbl)
 	for i,v in pairs(tbl.s) do
 		c = c + 1
 		local typeid = tbl.stypes[i]
-		local tostring_this = tostring_typeid[typeid]
+		local tostring_this = rawget(tostring_typeid, typeid)
 		if tostring_this then
 			ret.s[tostring_this(v)] = i
 			ret.stypes[tostring_this(v)] = "s"
@@ -997,7 +997,7 @@ registerCallback( "postinit", function()
 	local getf, setf
 	for k,v in pairs( wire_expression_types ) do
 		local name = k
-		local id = v[1]
+		local id = rawget(v, 1)
 
 		if (!blocked_types[id]) then -- blocked check start
 
@@ -1009,24 +1009,24 @@ registerCallback( "postinit", function()
 
 		-- Getters
 		registerOperator("idx",	id.."=ts"		, id, function(self,args)
-			local op1, op2 = args[2], args[3]
+			local op1, op2 = rawget(args, 2), rawget(args, 3)
 			local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
-			if (!rv1.s[rv2] or rv1.stypes[rv2] != id) then return fixDefault(v[2]) end
-			if (v[6] and v[6](rv1.s[rv2])) then return fixDefault(v[2]) end -- Type check
+			if (!rv1.s[rv2] or rv1.stypes[rv2] != id) then return fixDefault(rawget(v, 2)) end
+			if (rawget(v, 6) and rawget(v, 6)(rv1.s[rv2])) then return fixDefault(rawget(v, 2)) end -- Type check
 			return rv1.s[rv2]
 		end)
 
 		registerOperator("idx",	id.."=tn"		, id, function(self,args)
-			local op1, op2 = args[2], args[3]
+			local op1, op2 = rawget(args, 2), rawget(args, 3)
 			local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
-			if (!rv1.n[rv2] or rv1.ntypes[rv2] != id) then return fixDefault(v[2]) end
-			if (v[6] and v[6](rv1.n[rv2])) then return fixDefault(v[2]) end -- Type check
+			if (!rv1.n[rv2] or rv1.ntypes[rv2] != id) then return fixDefault(rawget(v, 2)) end
+			if (rawget(v, 6) and rawget(v, 6)(rv1.n[rv2])) then return fixDefault(rawget(v, 2)) end -- Type check
 			return rv1.n[rv2]
 		end)
 
 		-- Setters
 		registerOperator("idx", id.."=ts"..id , id, function( self, args )
-			local op1, op2, op3, scope = args[2], args[3], args[4], args[5]
+			local op1, op2, op3, scope = rawget(args, 2), rawget(args, 3), rawget(args, 4), rawget(args, 5)
 			local rv1, rv2, rv3 = op1[1](self, op1), op2[1](self, op2), op3[1](self, op3)
 			if (rv1.s[rv2] == nil and rv3 ~= nil) then rv1.size = rv1.size + 1
 			elseif (rv1.n[rv2] ~= nil and rv3 == nil) then rv1.size = rv1.size - 1 end
@@ -1037,7 +1037,7 @@ registerCallback( "postinit", function()
 		end)
 
 		registerOperator("idx", id.."=tn"..id, id, function(self,args)
-			local op1, op2, op3, scope = args[2], args[3], args[4], args[5]
+			local op1, op2, op3, scope = rawget(args, 2), rawget(args, 3), rawget(args, 4), rawget(args, 5)
 			local rv1, rv2, rv3 = op1[1](self, op1), op2[1](self, op2), op3[1](self, op3)
 			if (rv1.n[rv2] == nil and rv3 ~= nil) then rv1.size = rv1.size + 1
 			elseif (rv1.n[rv2] ~= nil and rv3 == nil) then rv1.size = rv1.size - 1 end
@@ -1055,9 +1055,9 @@ registerCallback( "postinit", function()
 		__e2setcost(8)
 
 		local function removefunc( self, rv1, rv2, numidx )
-			if (!rv1 or !rv2) then return fixDefault(v[2]) end
+			if (!rv1 or !rv2) then return fixDefault(rawget(v, 2)) end
 			if (numidx) then
-				if (!rv1.n[rv2] or rv1.ntypes[rv2] != id) then return fixDefault(v[2]) end
+				if (!rv1.n[rv2] or rv1.ntypes[rv2] != id) then return fixDefault(rawget(v, 2)) end
 				local ret = rv1.n[rv2]
 				if rv2 < 1 then -- table.remove doesn't work if the index is below 1
 					rv1.n[rv2] = nil
@@ -1070,7 +1070,7 @@ registerCallback( "postinit", function()
 				self.GlobalScope.vclk[rv1] = true
 				return ret
 			else
-				if (!rv1.s[rv2] or rv1.stypes[rv2] != id) then return fixDefault(v[2]) end
+				if (!rv1.s[rv2] or rv1.stypes[rv2] != id) then return fixDefault(rawget(v, 2)) end
 				local ret = rv1.s[rv2]
 				rv1.s[rv2] = nil
 				rv1.stypes[rv2] = nil
@@ -1083,12 +1083,12 @@ registerCallback( "postinit", function()
 		name = upperfirst( name )
 		if (name == "Normal") then name = "Number" end
 		registerFunction("remove"..name,"t:s",id,function(self,args)
-			local op1, op2 = args[2], args[3]
+			local op1, op2 = rawget(args, 2), rawget(args, 3)
 			local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
 			return removefunc( self, rv1, rv2)
 		end)
 		registerFunction("remove"..name,"t:n",id,function(self,args)
-			local op1, op2 = args[2], args[3]
+			local op1, op2 = rawget(args, 2), rawget(args, 3)
 			local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
 			return removefunc(self, rv1, rv2, true)
 		end)
@@ -1101,7 +1101,7 @@ registerCallback( "postinit", function()
 
 		-- Push a variable into the table (into the array part)
 		registerFunction( "push"..name,"t:"..id,"",function(self,args)
-			local op1, op2 = args[2], args[3]
+			local op1, op2 = rawget(args, 2), rawget(args, 3)
 			local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
 			if rv2 == nil then return end
 			local n = #rv1.n+1
@@ -1113,13 +1113,13 @@ registerCallback( "postinit", function()
 		end)
 
 		registerFunction( "pop"..name,"t:",id,function(self,args)
-			local op1 = args[2]
+			local op1 = rawget(args, 2)
 			local rv1 = op1[1](self, op1)
 			return removefunc(self, rv1, #rv1.n, true)
 		end)
 
 		registerFunction( "insert"..name,"t:n"..id,"",function(self,args)
-			local op1, op2, op3 = args[2], args[3], args[4]
+			local op1, op2, op3 = rawget(args, 2), rawget(args, 3), rawget(args, 4)
 			local rv1, rv2, rv3 = op1[1](self, op1), op2[1](self, op2), op3[1](self,op3)
 			if rv3 == nil then return end
 			if rv2 < 0 then return end
@@ -1132,7 +1132,7 @@ registerCallback( "postinit", function()
 		end)
 
 		registerFunction( "unshift"..name,"t:"..id,"",function(self,args)
-			local op1, op2 = args[2], args[3]
+			local op1, op2 = rawget(args, 2), rawget(args, 3)
 			local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
 			if rv2 == nil then return end
 			rv1.size = rv1.size + 1
@@ -1148,12 +1148,12 @@ registerCallback( "postinit", function()
 		__e2setcost(nil)
 
 		registerOperator("fea", "s" .. id .. "t", "", function(self, args)
-			local keyname, valname = args[2], args[3]
+			local keyname, valname = rawget(args, 2), rawget(args, 3)
 
-			local tbl = args[4]
-			tbl = tbl[1](self, tbl)
+			local tbl = rawget(args, 4)
+			tbl = rawget(tbl, 1)(self, tbl)
 
-			local statement = args[5]
+			local statement = rawget(args, 5)
 
 			for key, value in pairs(tbl.s) do
 				if tbl.stypes[key] == id then
@@ -1180,12 +1180,12 @@ registerCallback( "postinit", function()
 		end)
 
 		registerOperator("fea", "n" .. id .. "t", "", function(self, args)
-			local keyname, valname = args[2], args[3]
+			local keyname, valname = rawget(args, 2), rawget(args, 3)
 
-			local tbl = args[4]
-			tbl = tbl[1](self, tbl)
+			local tbl = rawget(args, 4)
+			tbl = rawget(tbl, 1)(self, tbl)
 
-			local statement = args[5]
+			local statement = rawget(args, 5)
 
 			for key, value in pairs(tbl.n) do
 				if tbl.ntypes[key] == id then
