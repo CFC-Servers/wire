@@ -2,8 +2,9 @@ E2Lib.RegisterExtension( "holo", true, "Allows E2 to create and manipulate non-s
 
 -- -----------------------------------------------------------------------------
 
+-- TODO: short-term checkOwner cache maybe?
 local function checkOwner(self)
-	return IsValid(self.player)
+	return IsValid(rawget(self, player))
 end
 
 -- -----------------------------------------------------------------------------
@@ -23,6 +24,17 @@ util.AddNetworkString("wire_holograms_set_scale")
 util.AddNetworkString("wire_holograms_set_bone_scale")
 util.AddNetworkString("wire_holograms_set_player_color")
 
+local tableRemove = table.remove
+local tableInsert = table.insert
+local netStart = net.Start
+local netWriteUInt = net.WriteUInt
+local netWriteFloat = net.WriteFloat
+local netWriteBit = net.WriteBit
+local netWriteVector = net.WriteVector
+local netSend = net.Send
+local netBroadcast = net.Broadcast
+
+local mathClamp = math.Clamp
 
 -- context = chip.context = self
 -- uid = context.uid = self.uid = chip.uid = player:UniqueID()
@@ -144,20 +156,32 @@ for _,v in pairs( ModelList ) do
 	end
 end
 
+local wirelibCanModel
 local function GetModel(self, model, skin)
 	skin = skin or 0
 
-	if ModelList[model] then
-		model = modelPath(ModelList[model])
+	local modelFromList = rawget(ModelList, model)
+	local modelAny = wire_holograms_modelany:GetInt()
+
+	if modelFromList then
+		model = modelFromList
 
 	-- If this model isn't already the absolute path of a default model, and only default models are allowed
-	elseif not pathLookup[model] and wire_holograms_modelany:GetInt() == 0 then
+	elseif not rawget(pathLookup, model) and modelAny == 0 then
 		return false
 	end
 
-	if wire_holograms_modelany:GetInt() ~= 2 and not WireLib.CanModel(self.player, model, skin) then
+	local canModel = wirelibCanModel
+	if not canModel then
+	    wirelibCanModel = rawget(WireLib, "CanModel")
+	    canModel = wirelibCanModel
+	end
+
+	local ply = rawget(self, "player")
+
+	if modelAny ~= 2 and not canModel(ply, model, skin) then
 		-- Check if the model is at least valid
-		if not WireLib.CanModel(self.player, model, 0) then
+		if not canModel(ply, model, 0) then
 			return false
 		end
 
@@ -177,39 +201,54 @@ local vis_queue = {}
 local player_color_queue = {}
 
 local function add_queue( queue, ply, data )
-	local plyqueue = queue[ply]
+	local plyqueue = rawget(queue, ply)
+
 	if not plyqueue then
 		plyqueue = {}
-		queue[ply] = plyqueue
+		rawset(queue, ply, plyqueue)
 	end
-	if #plyqueue==wire_holograms_max:GetInt() then return end
-	plyqueue[#plyqueue+1] = data
+
+	local plyQueueSize = #plyqueue
+	if plyQueueSize == rawget(wire_holograms_max, "GetInt")(wire_holograms_max) then return end
+
+	tableInsert( plyqueue, data )
+end
+
+local function remove_from_queue( queue, holo_ent )
+    local queueSize = #queue
+
+    for i = 1, queueSize do
+        local plyqueue = rawget(queue, i)
+        local plyqueueSize = #plyqueue
+
+        for j = plyqueueSize, 1, -1 do -- iterate backwards to allow removing
+            -- local holo = plyqueue[j][1] -- the hologram is always at idx 1
+
+            local holo = rawget( rawget(plyqueue, j), 1 )
+            local holoEnt = rawget( holo, "ent" )
+
+            if holoEnt == holo_ent then
+                tableRemove( plyqueue, i ) -- remove it from the queue
+            end
+        end
+    end
 end
 
 -- call to remove all queued items for a specific hologram
 local function remove_from_queues( holo_ent )
-	local function remove_from_queue( queue )
-		for _, plyqueue in pairs( queue ) do
-			for i=#plyqueue,1,-1 do -- iterate backwards to allow removing
-				local Holo = plyqueue[i][1] -- the hologram is always at idx 1
-				if Holo.ent == holo_ent then
-					table.remove( plyqueue, i ) -- remove it from the queue
-				end
-			end
-		end
-	end
-
-	remove_from_queue( scale_queue )
-	remove_from_queue( bone_scale_queue )
-	remove_from_queue( clip_queue )
-	remove_from_queue( vis_queue )
-	remove_from_queue( player_color_queue )
+	remove_from_queue( scale_queue, holo_ent )
+	remove_from_queue( bone_scale_queue, holo_ent )
+	remove_from_queue( clip_queue, holo_ent )
+	remove_from_queue( vis_queue, holo_ent )
+	remove_from_queue( player_color_queue, holo_ent )
 end
 
 local function remove_holo( Holo )
-	if IsValid(Holo.ent) then
-		remove_from_queues( Holo.ent )
-		Holo.ent:Remove()
+    local holoEnt = rawget( Holo, "ent" )
+
+	if IsValid(holoEnt) then
+		remove_from_queues( holoEnt )
+		rawget(holoEnt, "Remove")(holoEnt)
 	end
 end
 
@@ -217,17 +256,23 @@ local function flush_scale_queue(queue, recipient)
 	if not queue then queue = scale_queue end
 	if not next(queue) then return end
 
-	net.Start("wire_holograms_set_scale")
-		for _, plyqueue in pairs(queue) do
+	netStart("wire_holograms_set_scale")
+	    local queueSize = #queue
+
+	    for i = 1, queueSize do
+	        local plyqueue = rawget( queue, i )
+
 			for _,Holo,scale in ipairs_map(plyqueue, unpack) do
-				net.WriteUInt(Holo.ent:EntIndex(), 16)
-				net.WriteFloat(scale.x)
-				net.WriteFloat(scale.y)
-				net.WriteFloat(scale.z)
+				netWriteUInt(rawget(Holo, "ent"):EntIndex(), 16)
+				netWriteFloat(rawget(scale, "x"))
+				netWriteFloat(rawget(scale, "y"))
+				netWriteFloat(rawget(scale, "z"))
 			end
 		end
-		net.WriteUInt(0, 16)
-	if recipient then net.Send(recipient) else net.Broadcast() end
+
+		netWriteUInt(0, 16)
+
+	if recipient then netSend(recipient) else netBroadcast() end
 end
 
 local function flush_bone_scale_queue(queue, recipient)
@@ -235,18 +280,26 @@ local function flush_bone_scale_queue(queue, recipient)
 	if not next(queue) then return end
 
 	net.Start("wire_holograms_set_bone_scale")
-	for _, plyqueue in pairs(queue) do
-		for _,Holo,bone,scale in ipairs_map(plyqueue, unpack) do
-			net.WriteUInt(Holo.ent:EntIndex(), 16)
-			net.WriteUInt(bone + 1, 16) -- using +1 to be able reset holo bones scale with -1 and not use signed int
-			net.WriteFloat(scale.x)
-			net.WriteFloat(scale.y)
-			net.WriteFloat(scale.z)
-		end
-	end
-	net.WriteUInt(0, 16)
-	net.WriteUInt(0, 16)
-	if recipient then net.Send(recipient) else net.Broadcast() end
+	    local queueSize = #queue
+
+        for i = 1, queueSize do
+            local plyqueue = rawget(queue, i)
+
+            for _,Holo,bone,scale in ipairs_map(plyqueue, unpack) do
+
+                netWriteUInt(rawget(Holo, "ent"):EntIndex(), 16)
+                netWriteUInt(bone + 1, 16) -- using +1 to be able reset holo bones scale with -1 and not use signed int
+                netWriteFloat(rawget(scale, "x"))
+                netWriteFloat(rawget(scale, "y"))
+                netWriteFloat(rawget(scale, "z"))
+
+            end
+        end
+
+        netWriteUInt(0, 16)
+        netWriteUInt(0, 16)
+
+	if recipient then netSend(recipient) else netBroadcast() end
 end
 
 local function flush_clip_queue(queue, recipient)
@@ -254,25 +307,42 @@ local function flush_clip_queue(queue, recipient)
 	if not next(queue) then return end
 
 	net.Start("wire_holograms_clip")
-		for _, plyqueue in pairs(queue) do
-			for _,Holo,clip in ipairs_map(plyqueue, unpack) do
-				if clip and clip.index then
-					net.WriteUInt(Holo.ent:EntIndex(), 16)
-					net.WriteUInt(clip.index, 4) -- 4: absolute highest wire_holograms_max_clips is thus 16
-					if clip.enabled ~= nil then
-						net.WriteBit(true)
-						net.WriteBit(clip.enabled)
-					elseif clip.origin and clip.normal and clip.localentid then
-						net.WriteBit(false)
-						net.WriteVector(clip.origin)
-						net.WriteFloat(clip.normal.x) net.WriteFloat(clip.normal.y) net.WriteFloat(clip.normal.z)
-						net.WriteUInt(clip.localentid, 16)
+	    local queueSize = #queue
+
+	    for i = 1, queueSize do
+	        local plyqueue = rawget(queue, i)
+
+			for _, Holo, clip in ipairs_map(plyqueue, unpack) do
+
+				if clip and rawget(clip, "index") then
+					netWriteUInt(rawget(Holo, "ent"):EntIndex(), 16)
+					netWriteUInt(rawget(clip, "index"), 4) -- 4: absolute highest wire_holograms_max_clips is thus 16
+
+					local clipEnabled = rawget(clip, "enabled")
+					local clipOrigin = rawget(clip, "origin")
+					local clipNormal = rawget(clip, "normal")
+					local clipLocalEntId = rawget(clip, "localentid")
+
+					if clipEnabled ~= nil then
+						netWriteBit(true)
+						netWriteBit(clipEnabled)
+
+					elseif clipOrigin and clipNomral and clipLocalEntId then
+						netWriteBit(false)
+						netWriteVector(clipOrigin)
+						netWriteFloat(rawget(clipNormal, "x"))
+						netWriteFloat(rawget(clipNormal, "y"))
+						netWriteFloat(rawget(clipNormal, "z"))
+						netWriteUInt(clipLocalEntId, 16)
 					end
 				end
+
 			end
 		end
-		net.WriteUInt(0, 16)
-	if recipient then net.Send(recipient) else net.Broadcast() end
+
+		netWriteUInt(0, 16)
+
+	if recipient then netSend(recipient) else netBroadcast() end
 end
 
 local function flush_vis_queue()
@@ -280,13 +350,15 @@ local function flush_vis_queue()
 
 	for ply,tbl in pairs( vis_queue ) do
 		if IsValid( ply ) and #tbl > 0 then
-			net.Start("wire_holograms_set_visible")
+			netStart("wire_holograms_set_visible")
+
 				for _,Holo,visible in ipairs_map(tbl, unpack) do
-					net.WriteUInt(Holo.ent:EntIndex(), 16)
-					net.WriteBit(visible)
+					netWriteUInt(rawget(Holo, "ent"):EntIndex(), 16)
+					netWriteBit(visible)
 				end
-				net.WriteUInt(0, 16)
-			net.Send(ply)
+
+				netWriteUInt(0, 16)
+			netSend(ply)
 		end
 	end
 end
@@ -294,15 +366,20 @@ end
 local function flush_player_color_queue()
 	if not next(player_color_queue) then return end
 
-	net.Start("wire_holograms_set_player_color")
+	netStart("wire_holograms_set_player_color")
 		for _, plyqueue in pairs(player_color_queue) do
+
 			for _,Holo,color in ipairs_map(plyqueue, unpack) do
-				net.WriteUInt(Holo.ent:EntIndex(), 16)
-				net.WriteVector(color)
+			    local holoEnt = rawget(Holo, "ent")
+				netWriteUInt(rawget(holoEnt, "EntIndex")(holoEnt), 16)
+				netWriteVector(color)
 			end
+
 		end
-		net.WriteUInt(0, 16)
-	net.Broadcast()
+
+		netWriteUInt(0, 16)
+
+	netBroadcast()
 end
 
 registerCallback("postexecute", function(self)
@@ -324,46 +401,59 @@ local function rescale(Holo, scale, bone)
 	local minval = -maxval
 
 	if scale then
-		local x = math.Clamp( scale[1], minval, maxval )
-		local y = math.Clamp( scale[2], minval, maxval )
-		local z = math.Clamp( scale[3], minval, maxval )
+		local x = mathClamp( rawget(scale, 1), minval, maxval )
+		local y = mathClamp( rawget(scale, 2), minval, maxval )
+		local z = mathClamp( rawget(scale, 3), minval, maxval )
 		local scale = Vector(x, y, z)
 
-		if Holo.scale ~= scale then
-			add_queue( scale_queue, Holo.e2owner, { Holo, scale } )
-			Holo.scale = scale
+		if rawget(Holo, "scale") ~= scale then
+			add_queue( scale_queue, rawget(Holo, "e2owner"), { Holo, scale } )
+			rawset(Holo, "scale", scale)
 		end
 	end
 
 	if bone then
-		Holo.bone_scale = Holo.bone_scale or {}
+	    local boneScale = rawget(Holo, "bone_scale")
+	    rawset(Holo, "bone_scale", boneScale or {})
+
 		if #bone == 2 then
-			local bidx, b_scale = bone[1], bone[2]
-			local x = math.Clamp( b_scale[1], minval, maxval )
-			local y = math.Clamp( b_scale[2], minval, maxval )
-			local z = math.Clamp( b_scale[3], minval, maxval )
+			local bidx, b_scale = rawget(bone, 1), rawget(bone, 2)
+
+			local x = mathClamp( rawget(b_scale, 1), minval, maxval )
+			local y = mathClamp( rawget(b_scale, 2), minval, maxval )
+			local z = mathClamp( rawget(b_scale, 3), minval, maxval )
 			local scale = Vector(x, y, z)
 
-			add_queue( bone_scale_queue, Holo.e2owner, { Holo, bidx, scale } )
+			add_queue( bone_scale_queue, rawget(Holo, "e2owner"), { Holo, bidx, scale } )
 			Holo.bone_scale[bidx] =  scale
 		else  -- reset holo bone scale
-			add_queue( bone_scale_queue, Holo.e2owner, { Holo, -1, Vector(0,0,0) } )
+			add_queue( bone_scale_queue, rawget(Holo, "e2owner"), { Holo, -1, Vector(0,0,0) } )
 			Holo.bone_scale = {}
 		end
 	end
 end
 
 local function check_clip(Holo, idx)
-	Holo.clips = Holo.clips or {}
+	local holoClips = rawget(Holo, "clips") or {}
+	rawset(Holo, "clips", holoClips)
 
 	if idx > 0 and idx <= wire_holograms_max_clips:GetInt() then
-		Holo.clips[idx] = Holo.clips[idx] or {}
-		local clip = Holo.clips[idx]
 
-		clip.enabled = clip.enabled or false
-		clip.origin = clip.origin or Vector(0,0,0)
-		clip.normal = clip.normal or Vector(0,0,0)
-		clip.localentid = clip.localentid or 0
+		Holo.clips[idx] = Holo.clips[idx] or {}
+		local clips = rawget(Holo, "clips")
+		local clip = rawget(clips, idx)
+
+		local clipEnabled = rawget(clip, "enabled") or false
+		rawset(clip, "enabled", clipEnabled)
+
+		local clipOrigin = rawget(clip, "origin") or Vector(0, 0, 0)
+		rawset(clip, "origin", clipOrigin)
+
+		local clipNormal = rawget(clip, "normal") or Vector(0, 0, 0)
+		rawset(clip, "normal", clipNormal)
+
+		local clipLocalEntId = rawget(clip, "localentid") or 0
+		rawset(clip, "localentid", clipLocalEntId)
 
 		return clip
 	end
@@ -373,11 +463,12 @@ end
 
 local function enable_clip(Holo, idx, enabled)
 	local clip = check_clip(Holo, idx)
+	local clipEnabled = rawget(clip, "enabled")
 
-	if clip and clip.enabled ~= enabled then
-		clip.enabled = enabled
+	if clip and clipEnabled ~= enabled then
+	    rawset(clip, "enabled", enabled)
 
-		add_queue( clip_queue, Holo.e2owner, { Holo,
+		add_queue( clip_queue, rawget(Holo, "e2owner"), { Holo,
 			{
 				index = idx,
 				enabled = enabled
@@ -389,12 +480,23 @@ end
 local function set_clip(Holo, idx, origin, normal, localentid)
 	local clip = check_clip(Holo, idx)
 
-	if clip and (clip.origin ~= origin or clip.normal ~= normal or clip.localentid ~= localentid) then
+	local clipOrigin = rawget(clip, "origin")
+	local clipNormal = rawget(clip, "normal")
+	local clipLocalentid = rawget(clip, "localentid")
+
+	if not clip then return end
+
+	if clipOrigin ~= origin or clipNormal ~= normal or clipLocalentid ~= localentid then
+	    rawset(clip, "origin", origin)
 		clip.origin = origin
+
+	    rawset(clip, "normal", normal)
 		clip.normal = normal
+
+	    rawset(clip, "localentid", localentid)
 		clip.localentid = localentid
 
-		add_queue( clip_queue, Holo.e2owner, { Holo,
+		add_queue( clip_queue, rawget(Holo, "e2owner"), { Holo,
 			{
 				index = idx,
 				origin = origin,
@@ -408,19 +510,27 @@ end
 local function set_visible(Holo, players, visible)
 	if not Holo.visible then Holo.visible = {} end
 	visible = (visible == 1) or (visible == true)
-	for _,ply in pairs( players ) do
-		if IsValid( ply ) and ply:IsPlayer() and Holo.visible[ply] ~= visible then
-			Holo.visible[ply] = visible
+
+	local plyCount = #players
+	for i = 1, plyCount do
+        local ply = rawget(players, i)
+        local plyVisibility = rawget(rawget(Holo, "visible"), ply)
+
+		if IsValid( ply ) and rawget(ply, "IsPlayer")(ply) and plyVisibility ~= visible then
+		    rawset(rawget(Holo, "visible"), ply, visible)
 			add_queue( vis_queue, ply, { Holo, visible } )
 		end
 	end
 end
 
 local function reset_clholo(Holo, scale)
-	if Holo.clips then
-		for cidx, clip in pairs(Holo.clips) do
-			if clip.enabled then
-				add_queue(clip_queue, Holo.e2owner, { Holo,
+
+	local holoClips = rawget(Holo, "clips")
+
+	if holoClips then
+		for cidx, clip in pairs(holoClips) do
+			if rawget(clip, "enabled") then
+				add_queue(clip_queue, rawget(Holo, "e2owner"), { Holo,
 					{
 						index = cidx,
 						enabled = false
@@ -428,21 +538,25 @@ local function reset_clholo(Holo, scale)
 				)
 			end
 		end
-		Holo.clips = {}
+		rawset(Holo, "clips", {})
 	end
+
 	rescale(Holo, scale, {})
-	if Holo.visible then
-		for ply, state in pairs(Holo.visible) do
+	local holoVisible = rawget(Holo, "visible")
+
+	if holoVisible then
+		for ply, state in pairs(holoVisible) do
 			if not state then
 				add_queue(vis_queue, ply, { Holo, true })
 			end
 		end
-		Holo.visible = {}
+
+		rawset(Holo, "visible", {})
 	end
 end
 
 local function set_player_color(Holo, color)
-	add_queue(player_color_queue, Holo.e2owner, { Holo, color })
+	add_queue(player_color_queue, rawget(Holo, "e2owner"), { Holo, color })
 end
 
 hook.Add( "PlayerInitialSpawn", "wire_holograms_set_vars", function(ply)
@@ -450,25 +564,27 @@ hook.Add( "PlayerInitialSpawn", "wire_holograms_set_vars", function(ply)
 	local b_s_queue = {}
 	local c_queue = {}
 
-	for pl_uid,rep in pairs( E2HoloRepo ) do
-		for k,Holo in pairs( rep ) do
+	for pl_uid, rep in pairs( E2HoloRepo ) do
+
+		for k, Holo in pairs( rep ) do
+
 			if Holo and IsValid(Holo.ent) then
-				local clips = Holo.clips
-				local scale = Holo.scale
-				local bone_scales = Holo.bone_scale
+				local clips = rawget(Holo, "clips")
+				local scale = rawget(Holo, "scale")
+				local bone_scales = rawget(Holo, "bone_scale")
 
 				table.insert(s_queue, { Holo, scale })
 
 				if bone_scales and next(bone_scales) ~= nil then
 					for bidx,b_scale in pairs(bone_scales) do
-						table.insert(b_s_queue, { Holo, bidx, b_scale })
+						tableInsert(b_s_queue, { Holo, bidx, b_scale })
 					end
 				end
 
 				if clips and next(clips) ~= nil then
-					for cidx,clip in pairs(clips) do
-						if clip.enabled then
-							table.insert(c_queue, {
+					for cidx, clip in pairs(clips) do
+						if rawget(clip, "enabled") then
+							tableInsert(c_queue, {
 								Holo,
 								{
 									index = cidx,
@@ -477,14 +593,14 @@ hook.Add( "PlayerInitialSpawn", "wire_holograms_set_vars", function(ply)
 							} )
 						end
 
-						if clip.origin and clip.normal and clip.localentid then
-							table.insert(c_queue, {
+						if rawget(clip, "origin") and rawget(clip, "normal") and rawget(clip, "localentid") then
+							tableInsert(c_queue, {
 								Holo,
 								{
 									index = cidx,
-									origin = clip.origin,
-									normal = clip.normal,
-									localentid = clip.localentid
+									origin = rawget(clip, "origin"),
+									normal = rawget(clip, "normal"),
+									localentid = rawget(clip, "localentid")
 								}
 							} )
 						end
@@ -503,11 +619,12 @@ end)
 
 local function MakeHolo(Player, Pos, Ang, model)
 	local prop = ents.Create( "gmod_wire_hologram" )
-	WireLib.setPos(prop, Pos)
-	WireLib.setAng(prop, Ang)
-	prop:SetModel(model)
-	prop:SetPlayer(Player)
-	prop:SetNWInt("ownerid", Player:UserID())
+	rawget(WireLib, "setPos")(prop, Pos)
+	rawget(WireLib, "setAng")(prop, Ang)
+
+	rawget(prop, "SetModel")(prop, model)
+	rawget(prop, "SetPlayer")(prop, Player)
+	rawget(prop, "SetNWInt")(prop, "ownerid", rawget(Player, "UserID")(Player))
 
 	return prop
 end
@@ -516,33 +633,49 @@ end
 local function CheckIndex(self, index)
 	index = index - index % 1
 	local Holo
+
 	if index<0 then
-		Holo = E2HoloRepo[self.uid][-index]
+		local globalHolos = rawget(E2HoloRepo, rawget(self, "uid"))
+		Holo = rawget(globalHolos, -index)
 	else
-		Holo = self.data.holos[index]
+		local data = rawget(self, "data")
+		local holos = rawget(data, "holos")
+		Holo = rawget(holos, index)
 	end
-	if not Holo or not IsValid(Holo.ent) then return nil end
+
+	if not Holo or not IsValid(rawget(Holo, "ent")) then return nil end
+
 	return Holo
 end
 
 -- Sets the given index to the given hologram.
 local function SetIndex(self, index, Holo)
 	index = index - index % 1
-	local rep = E2HoloRepo[self.uid]
-	if index<0 then
-		rep[-index] = Holo
+
+	local rep = rawget(E2HoloRepo, rawget(self, "uid"))
+
+	if index < 0 then
+		rawset(rep, -index, Holo)
 	else
-		local holos = self.data.holos
-		if holos[index] then rep[holos[index]] = nil end
-		holos[index] = Holo
-		if Holo then rep[Holo] = Holo end
+		local data = rawget(self, "data")
+		local holos = rawget(data, "holos")
+
+		if rawget(holos, index) then
+		    local theHolo = rawget(holos, index)
+		    rawset(rep, theHolo, nil)
+		end
+
+		rawset(holos, index, Holo)
+		if Holo then rawset(rep, Holo, Holo) end
 	end
 end
 
 local function CreateHolo(self, index, pos, scale, ang, color, model)
-	if not pos   then pos   = self.entity:GetPos() end
+    local ent = rawget(Self, "entity")
+
+	if not pos   then pos   = rawget(ent, "GetPos")(ent) end
 	if not scale then scale = Vector(1,1,1) end
-	if not ang   then ang   = self.entity:GetAngles() end
+	if not ang   then ang   = rawget(ent, "GetAngles")(ent) end
 
 	model = GetModel(self, model or "cube") or "models/holograms/cube.mdl"
 
@@ -553,38 +686,58 @@ local function CreateHolo(self, index, pos, scale, ang, color, model)
 	end
 
 	local prop
+	local holoEnt = rawget(Holo, "ent")
 
-	if IsValid(Holo.ent) then
-		prop = Holo.ent
-		WireLib.setPos(prop, pos)
-		WireLib.setAng(prop, ang)
+	if IsValid(holoEnt) then
+		prop = holoEnt
+		rawget(WireLib, "setPos")(prop, pos)
+		rawget(WireLib, "setAng")(prop, ang)
 		prop:SetModel( model )
 	else
-		prop = MakeHolo(self.player, pos, ang, model, {}, {})
-		prop:Activate()
-		prop:Spawn()
-		prop:SetSolid(SOLID_NONE)
-		prop:SetMoveType(MOVETYPE_NONE)
-		PlayerAmount[self.uid] = PlayerAmount[self.uid]+1
-		Holo.ent = prop
-		Holo.e2owner = self
+		prop = MakeHolo(rawget(self, "player"), pos, ang, model, {}, {})
+
+		rawget(prop, "Activate")(prop)
+		rawget(prop, "Spawn")(prop)
+		rawget(prop, "SetSolid")(prop, SOLID_NONE)
+		rawget(prop, "SetMoveType")(prop, MOVETYPE_NONE)
+
+		do
+            local uid = rawget(self, "uid")
+            local new = rawget(PlayerAmount, uid) + 1
+            rawset(PlayerAmount, uid, new)
+        end
+
+		rawset(Holo, "ent", prop)
+		rawset(Holo, "e2owner", self)
 
 		prop:CallOnRemove( "holo_cleanup", function( ent, self, index ) --Give the player more holograms if we get removed
 			local Holo = CheckIndex( self, index )
 			if not Holo then return end
 
-			PlayerAmount[self.uid] = PlayerAmount[self.uid] - 1
+            local uid = rawget(self, "uid")
+            local new = rawget(PlayerAmount, uid) - 1
+            rawset(PlayerAmount, uid, new)
+
 			SetIndex( self, index, nil )
 		end, self, index )
 	end
 
 	if not IsValid(prop) then return nil end
 
-	if color then WireLib.SetColor(Holo.ent, Color(color[1],color[2],color[3],color[4] or 255)) end
+	if color then
+        local r = rawget(color, 1)
+        local g = rawget(color, 2)
+        local b = rawget(color, 3)
+        local a = rawget(color, 4) or 255
+        local holoColor = Color(r, g, b, a)
+        local setColor = rawget(WireLib, "SetColor")
+
+        setColor(rawget(Holo, "ent"), holoColor)
+	end
 
 	reset_clholo(Holo, scale) -- Reset scale, clips, and visible status
 
-	prop.E2HoloData = Holo
+	rawset(prop, "E2HoloData", Holo)
 
 	return prop
 end
@@ -592,58 +745,94 @@ end
 -- -----------------------------------------------------------------------------
 
 local function CheckSpawnTimer( self, readonly )
-	local holo = self.data.holo
-	if CurTime() >= holo.nextSpawn then
-		holo.nextSpawn = CurTime()+1
-		if CurTime() >= holo.nextBurst then
-			holo.remainingSpawns = wire_holograms_burst_amount:GetInt()
-		elseif holo.remainingSpawns < wire_holograms_spawn_amount:GetInt() then
-			holo.remainingSpawns = wire_holograms_spawn_amount:GetInt()
+	local holoData = rawget(self, "data")
+	local holo = rawget(holoData, "holo")
+
+	local rightNow = CurTime()
+	local burstDelay = rawget(wire_holograms_burst_delay, "GetInt")(wire_holograms_burst_delay)
+	local burstAmount = rawget(wire_holograms_burst_amount, "GetInt")(wire_holograms_burst_amount)
+	local spawnAmount = rawget(wire_holograms_spawn_amount, "GetInt")(wire_holograms_spawn_amount)
+
+	if rightNow >= rawget(holo, "nextSpawn") then
+		rawset(holo, "nextSpawn", rightNow + 1)
+
+		if rightNow >= rawget(holo, "nextBurst") then
+			rawset(holo, "remainingSpawns", burstAmount)
+		elseif rawget(holo, "remainingSpawns") < spawnAmount then
+		    rawset(holo, "remainingSpawns", spawnAmount)
 		end
 	end
 
-	if CurTime() >= holo.nextBurst then
-		holo.nextBurst = CurTime() + wire_holograms_burst_delay:GetInt()
+	if rightNow >= rawget(holo, "nextBurst") then
+	    rawset(holo, "nextBurst", rightNow + burstDelay)
 	end
 
-	if holo.remainingSpawns > 0 then
+	local holoRemainingSpawns = rawget(holo, "remainingSpawns")
+
+	if holoRemainingSpawns > 0 then
 		if not readonly then
-			holo.remainingSpawns = holo.remainingSpawns - 1
+		    rawset(holo, "remainingSpawns", holoRemainingSpawns - 1)
 		end
+
 		return true
-	else
-		return false
-	end
+    end
+
+    return false
 end
 
 -- Removes all holograms from the given chip.
 local function clearholos(self)
 	-- delete local holos
-	for index,Holo in pairs(self.data.holos) do remove_holo(Holo) end
+	local selfData = rawget(self, "data")
+	local holos = rawget(selfData, "holos")
+
+	-- FIXME: Can this use ipairs?
+	for index,Holo in ipairs(holos) do remove_holo(Holo) end
 
 	-- delete global holos owned by this chip
-	local rep = E2HoloRepo[self.uid]
+	local uid = rawget(self, "uid")
+	local rep = rawget(E2HoloRepo, uid)
+
 	if not rep then return end
-	for index,Holo in ipairs(rep) do
-		if Holo.e2owner == self then remove_holo(Holo) end
+
+	local repCount = #rep
+	for i = 1, repCount do
+	    local Holo = rawget(rep, i)
+
+		if rawget(Holo, "e2owner") == self then
+		    remove_holo(Holo)
+		end
 	end
 end
 
-local function clearholos_all(ply_uid)
-	if ply_uid == nil then
-		for pl_uid, rep in pairs(E2HoloRepo) do clearholos_all(pl_uid) end
+local function clearholos_all(plyUid)
+	if plyUid == nil then
+		for plyUid in pairs(E2HoloRepo) do
+		    clearholos_all(pl_uid)
+		end
+
 		return
 	end
 
-	for k,Holo in pairs(E2HoloRepo[ply_uid]) do
-		if Holo and IsValid(Holo.ent) then
-			Holo.ent:RemoveCallOnRemove( "holo_cleanup" )
-			remove_holo(Holo)
+	-- FIXME: Is this table like 1,2,3,4,5?
+	local plyHolos = rawget(E2HoloRepo, plyUid)
+	local plyHolosCount = #plyHolos
+
+	for k = 1, plyHolosCount do
+        local Holo = rawget(plyHolos, k)
+
+		if Holo then
+		    local holoEnt = rawget(holo, "ent")
+
+		    if IsValid(holoEnt) then
+                rawget(holoEnt, "RemoveCallOnRemove")( holoEnt, "holo_cleanup" )
+                remove_holo(Holo)
+            end
 		end
 	end
 
-	E2HoloRepo[ply_uid] = {}
-	PlayerAmount[ply_uid] = 0
+	rawset(E2HoloRepo, plyUid, {})
+	rawset(PlayerAmount, plyUid, 0)
 end
 
 -- -----------------------------------------------------------------------------
@@ -654,91 +843,211 @@ __e2setcost(30) -- temporary
 
 e2function entity holoCreate(index, vector position, vector scale, angle ang, vector color, string model)
 	if not checkOwner(self) then return end
-	if BlockList[self.player:SteamID()] == true or CheckSpawnTimer( self ) == false then return end
-	local Holo = CheckIndex(self, index)
-	if not Holo and PlayerAmount[self.uid] >= wire_holograms_max:GetInt() then return end
 
-	position = Vector(position[1], position[2], position[3])
-	ang = Angle(ang[1], ang[2], ang[3])
+	local uid = rawget(self, "uid")
+	local ply = rawget(self, "player")
+	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+
+	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
+
+	local Holo = CheckIndex(self, index)
+
+	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	if not Holo and overLimit then return end
+
+	position = Vector(
+	    rawget(position, 1),
+	    rawget(position, 2),
+	    rawget(position, 3)
+	)
+
+	ang = Angle(
+	    rawget(ang, 1),
+	    rawget(ang, 2),
+	    rawget(ang, 3)
+	)
+
 	local ret = CreateHolo(self, index, position, scale, ang, color, model)
 	if IsValid(ret) then return ret end
 end
 
 e2function entity holoCreate(index, vector position, vector scale, angle ang, vector4 color, string model)
 	if not checkOwner(self) then return end
-	if BlockList[self.player:SteamID()] == true or CheckSpawnTimer( self ) == false then return end
-	local Holo = CheckIndex(self, index)
-	if not Holo and PlayerAmount[self.uid] >= wire_holograms_max:GetInt() then return end
 
-	position = Vector(position[1], position[2], position[3])
-	ang = Angle(ang[1], ang[2], ang[3])
+	local ply = rawget(self, "player")
+	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+
+	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
+
+	local Holo = CheckIndex(self, index)
+
+	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	if not Holo and overLimit then return end
+
+	position = Vector(
+	    rawget(position, 1),
+	    rawget(position, 2),
+	    rawget(position, 3)
+	)
+
+	ang = Angle(
+	    rawget(ang, 1),
+	    rawget(ang, 2),
+	    rawget(ang, 3)
+	)
+
 	local ret = CreateHolo(self, index, position, scale, ang, color, model)
 	if IsValid(ret) then return ret end
 end
 
 e2function entity holoCreate(index, vector position, vector scale, angle ang, vector color)
 	if not checkOwner(self) then return end
-	if BlockList[self.player:SteamID()] == true or CheckSpawnTimer( self ) == false then return end
-	local Holo = CheckIndex(self, index)
-	if not Holo and PlayerAmount[self.uid] >= wire_holograms_max:GetInt() then return end
 
-	position = Vector(position[1], position[2], position[3])
-	ang = Angle(ang[1], ang[2], ang[3])
+	local ply = rawget(self, "player")
+	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+
+	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
+
+	local Holo = CheckIndex(self, index)
+
+	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	if not Holo and overLimit then return end
+
+	position = Vector(
+	    rawget(position, 1),
+	    rawget(position, 2),
+	    rawget(position, 3)
+	)
+
+	ang = Angle(
+	    rawget(ang, 1),
+	    rawget(ang, 2),
+	    rawget(ang, 3)
+	)
+
 	local ret = CreateHolo(self, index, position, scale, ang, color)
 	if IsValid(ret) then return ret end
 end
 
 e2function entity holoCreate(index, vector position, vector scale, angle ang, vector4 color)
 	if not checkOwner(self) then return end
-	if BlockList[self.player:SteamID()] == true or CheckSpawnTimer( self ) == false then return end
-	local Holo = CheckIndex(self, index)
-	if not Holo and PlayerAmount[self.uid] >= wire_holograms_max:GetInt() then return end
 
-	position = Vector(position[1], position[2], position[3])
-	ang = Angle(ang[1], ang[2], ang[3])
+	local ply = rawget(self, "player")
+	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+
+	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
+
+	local Holo = CheckIndex(self, index)
+
+	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	if not Holo and overLimit then return end
+
+	position = Vector(
+	    rawget(position, 1),
+	    rawget(position, 2),
+	    rawget(position, 3)
+	)
+
+	ang = Angle(
+	    rawget(ang, 1),
+	    rawget(ang, 2),
+	    rawget(ang, 3)
+	)
+
 	local ret = CreateHolo(self, index, position, scale, ang, color)
 	if IsValid(ret) then return ret end
 end
 
 e2function entity holoCreate(index, vector position, vector scale, angle ang)
 	if not checkOwner(self) then return end
-	if BlockList[self.player:SteamID()] == true or CheckSpawnTimer( self ) == false then return end
-	local Holo = CheckIndex(self, index)
-	if not Holo and PlayerAmount[self.uid] >= wire_holograms_max:GetInt() then return end
 
-	position = Vector(position[1], position[2], position[3])
-	ang = Angle(ang[1], ang[2], ang[3])
+	local uid = rawget(self, "uid")
+	local ply = rawget(self, "player")
+	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+
+	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
+
+	local Holo = CheckIndex(self, index)
+
+	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	if not Holo and overLimit then return end
+
+	position = Vector(
+	    rawget(position, 1),
+	    rawget(position, 2),
+	    rawget(position, 3)
+	)
+
+	ang = Angle(
+	    rawget(ang, 1),
+	    rawget(ang, 2),
+	    rawget(ang, 3)
+	)
 	local ret = CreateHolo(self, index, position, scale, ang)
 	if IsValid(ret) then return ret end
 end
 
 e2function entity holoCreate(index, vector position, vector scale)
 	if not checkOwner(self) then return end
-	if BlockList[self.player:SteamID()] == true or CheckSpawnTimer( self ) == false then return end
-	local Holo = CheckIndex(self, index)
-	if not Holo and PlayerAmount[self.uid] >= wire_holograms_max:GetInt() then return end
 
-	position = Vector(position[1],position[2],position[3])
+	local uid = rawget(self, "uid")
+	local ply = rawget(self, "player")
+	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+
+	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
+
+	local Holo = CheckIndex(self, index)
+
+	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	if not Holo and overLimit then return end
+
+	position = Vector(
+	    rawget(position, 1),
+	    rawget(position, 2),
+	    rawget(position, 3)
+	)
+
 	local ret = CreateHolo(self, index, position, scale)
 	if IsValid(ret) then return ret end
 end
 
 e2function entity holoCreate(index, vector position)
 	if not checkOwner(self) then return end
-	if BlockList[self.player:SteamID()] == true or CheckSpawnTimer( self ) == false then return end
-	local Holo = CheckIndex(self, index)
-	if not Holo and PlayerAmount[self.uid] >= wire_holograms_max:GetInt() then return end
 
-	position = Vector(position[1],position[2],position[3])
+	local uid = rawget(self, "uid")
+	local ply = rawget(self, "player")
+	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+
+	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
+
+	local Holo = CheckIndex(self, index)
+
+	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	if not Holo and overLimit then return end
+
+	position = Vector(
+	    rawget(position, 1),
+	    rawget(position, 2),
+	    rawget(position, 3)
+	)
+
 	local ret = CreateHolo(self, index, position)
 	if IsValid(ret) then return ret end
 end
 
 e2function entity holoCreate(index)
 	if not checkOwner(self) then return end
-	if BlockList[self.player:SteamID()] == true or CheckSpawnTimer( self ) == false then return end
+
+	local uid = rawget(self, "uid")
+	local ply = rawget(self, "player")
+	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+
+	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
+
 	local Holo = CheckIndex(self, index)
-	if not Holo and PlayerAmount[self.uid] >= wire_holograms_max:GetInt() then return end
+
+	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	if not Holo and overLimit then return end
 
 	local ret = CreateHolo(self, index)
 	if IsValid(ret) then return ret end
@@ -758,7 +1067,7 @@ end
 
 e2function void holoDeleteAll( all )
 	if all > 0 then
-		clearholos_all( self.uid )
+		clearholos_all( rawget(self, "uid") )
 	else
 		clearholos( self )
 	end
@@ -767,14 +1076,27 @@ end
 e2function void holoReset(index, string model, vector scale, vector color, string material)
 	model = GetModel(self, model)
 	if not model then return end
+
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	Holo.ent:SetModel(model)
-	WireLib.SetColor(Holo.ent, Color(color[1],color[2],color[3],255))
-	E2Lib.setMaterial(Holo.ent, material)
+	local holoEnt = rawget(Holo, "ent")
 
-	remove_from_queues( Holo.ent )
+	holoEnt:SetModel(model)
+
+	local setColor = rawget(WireLib, "SetColor")
+	local col = Color(
+	    rawget(color, 1),
+	    rawget(color, 2),
+	    rawget(color, 3),
+	    255
+	)
+
+	setColor(holoEnt, col)
+
+	rawget(E2Lib, "setMaterial")(holoEnt, material)
+
+	remove_from_queues( holoEnt )
 	reset_clholo(Holo, scale) -- Reset scale, clips, and visible status
 end
 
@@ -783,7 +1105,7 @@ __e2setcost(2)
 e2function number holoCanCreate()
 	if (not checkOwner(self)) then return 0 end
 
-	if CheckSpawnTimer(self, true) == false or PlayerAmount[self.uid] >= wire_holograms_max:GetInt() then
+	if CheckSpawnTimer(self, true) == false or rawget(PlayerAmount, rawget(self, "uid")) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max) then
 		return 0
 	end
 
@@ -792,15 +1114,18 @@ end
 
 e2function number holoRemainingSpawns()
 	CheckSpawnTimer(self, true)
-	return self.data.holo.remainingSpawns
+	local selfData = rawget(self, "data")
+	local dataHolo = rawget(selfData, "holo")
+	
+	return rawget(dataHolo, "remainingSpawns")
 end
 
 e2function number holoAmount()
-	return PlayerAmount[self.uid]
+	return rawget(PlayerAmount, rawget(self, "uid"))
 end
 
 e2function number holoMaxAmount()
-	return wire_holograms_max:GetInt()
+	return rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
 end
 
 -- -----------------------------------------------------------------------------
@@ -825,11 +1150,12 @@ e2function void holoScaleUnits(index, vector size)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	local propsize = Holo.ent:OBBMaxs()-Holo.ent:OBBMins()
+	local holoEnt = rawget(Holo, "ent")
+	local propsize = rawget(holoEnt,"OBBMaxs")(holoEnt) - rawget(holoEnt, "OBBMins")(holoEnt)
 
-	local x = size[1] / propsize.x
-	local y = size[2] / propsize.y
-	local z = size[3] / propsize.z
+	local x = rawget(size, 1) / rawget(propsize, "x")
+	local y = rawget(size, 2) / rawget(propsize, "y")
+	local z = rawget(size, 3) / rawget(propsize, "z")
 
 	rescale(Holo, Vector(x, y, z))
 end
@@ -838,11 +1164,16 @@ e2function vector holoScaleUnits(index)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return {0,0,0} end
 
-	local scale = Holo.scale or {0,0,0} -- TODO: maybe {1,1,1}?
+	local scale = rawget(Holo, "scale") or {0,0,0} -- TODO: maybe {1,1,1}?
 
-	local propsize = Holo.ent:OBBMaxs()-Holo.ent:OBBMins()
+	local holoEnt = rawget(Holo, "ent")
+	local propsize = rawget(holoEnt, "OBBMaxs")(holoEnt) - rawget(holoEnt, "OBBMins")(holoEnt)
 
-	return Vector(scale[1] * propsize.x, scale[2] * propsize.y, scale[3] * propsize.z)
+	return Vector(
+        rawget(scale, 1) * rawget(propsize, "x"),
+        rawget(scale, 2) * rawget(propsize, "y"),
+        rawget(scale, 3) * rawget(propsize, "z")
+    )
 end
 
 
@@ -856,24 +1187,32 @@ end
 e2function void holoBoneScale(index, string bone, vector scale)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
-	local boneindex = Holo.ent:LookupBone(bone)
+
+	local boneindex = rawget(Holo, "ent"):LookupBone(bone)
 	if boneindex == nil then return end
 
 	rescale(Holo, nil, {boneindex, scale})
 end
 
 e2function vector holoBoneScale(index, boneindex)
+	local default = {0, 0, 0}
 	local Holo = CheckIndex(self, index)
-	if not Holo then return {0,0,0} end
-	return Holo.bone_scale[boneindex] or {0, 0, 0}
+	if not Holo then return default end
+
+	local boneScale = rawget(Holo, "bone_scale")
+	return rawget(boneScale, boneIndex) or default
 end
 
 e2function vector holoBoneScale(index, string bone)
+	local default = {0, 0, 0}
 	local Holo = CheckIndex(self, index)
 	if not Holo then return {0,0,0} end
-	local boneindex = Holo.ent:LookupBone(bone)
-	if boneindex == nil then return {0,0,0} end
-	return Holo.bone_scale[boneindex] or {0, 0, 0}
+
+	local boneindex = rawget(Holo, "ent"):LookupBone(bone)
+	if boneindex == nil then return default end
+
+	local boneScale = rawget(Holo, "bone_scale")
+	return rawget(boneScale, boneIndex) or default
 end
 __e2setcost(1)
 e2function number holoClipsAvailable()
@@ -907,42 +1246,108 @@ e2function void holoClip(index, vector origin, vector normal, isglobal) -- Clip 
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	set_clip(Holo, 1, Vector(origin[1], origin[2], origin[3]), Vector(normal[1], normal[2], normal[3]), isglobal ~= 0 and 0 or Holo.ent:EntIndex())
+	set_clip(
+        Holo, 1,
+        Vector(
+            rawget(origin, 1),
+            rawget(origin, 2),
+            rawget(origin, 3)
+        ),
+        Vector(
+            rawget(normal, 1),
+            rawget(normal, 2),
+            rawget(normal, 3)
+        ),
+        isglobal ~= 0 and 0 or rawget(Holo, "ent"):EntIndex()
+    )
 end
 
 e2function void holoClip(index, clipidx, vector origin, vector normal, isglobal)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	set_clip(Holo, clipidx, Vector(origin[1], origin[2], origin[3]), Vector(normal[1], normal[2], normal[3]), isglobal ~= 0 and 0 or Holo.ent:EntIndex())
+	set_clip(
+        Holo, clipidx,
+        Vector(
+            rawget(origin, 1),
+            rawget(origin, 2),
+            rawget(origin, 3)
+        ),
+        Vector(
+            rawget(normal, 1),
+            rawget(normal, 2),
+            rawget(normal, 3)
+        ),
+        isglobal ~= 0 and 0 or rawget(Holo, "ent"):EntIndex()
+    )
 end
 
 e2function void holoClip(index, vector origin, vector normal, entity localent) -- Clip at first index
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	set_clip(Holo, 1, Vector(origin[1], origin[2], origin[3]), Vector(normal[1], normal[2], normal[3]), localent:EntIndex())
+	set_clip(
+        Holo, 1,
+        Vector(
+            rawget(origin, 1),
+            rawget(origin, 2),
+            rawget(origin, 3)
+        ),
+        Vector(
+            rawget(normal, 1),
+            rawget(normal, 2),
+            rawget(normal, 3)
+        ),
+        localent:EntIndex()
+    )
 end
 
 e2function void holoClip(index, clipidx, vector origin, vector normal, entity localent)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	set_clip(Holo, clipidx, Vector(origin[1], origin[2], origin[3]), Vector(normal[1], normal[2], normal[3]), localent:EntIndex())
+	set_clip(
+        Holo, clipidx,
+        Vector(
+            rawget(origin, 1),
+            rawget(origin, 2),
+            rawget(origin, 3)
+        ),
+        Vector(
+            rawget(normal, 1),
+            rawget(normal, 2),
+            rawget(normal, 3)
+        ),
+        localent:EntIndex()
+    )
 end
 
 e2function void holoPos(index, vector position)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	WireLib.setPos(Holo.ent, Vector(position[1],position[2],position[3]))
+	rawget(WireLib, "setPos")(
+	    rawget(Holo, "ent"),
+	    Vector(
+	        rawget(position, 1),
+	        rawget(position, 2),
+	        rawget(position, 3)
+	    )
+	)
 end
 
 e2function void holoAng(index, angle ang)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	WireLib.setAng(Holo.ent, Angle(ang[1],ang[2],ang[3]))
+	rawget(WireLib, "setAng")(
+	    rawget(Holo, "ent"),
+	    Angle(
+	        rawget(ang, 1),
+	        rawget(ang, 2),
+	        rawget(ang, 3)
+	    )
+	)
 end
 
 -- -----------------------------------------------------------------------------
@@ -951,30 +1356,59 @@ e2function void holoColor(index, vector color)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	WireLib.SetColor(Holo.ent, Color(color[1],color[2],color[3],Holo.ent:GetColor().a))
+	local holoEnt = rawget(Holo, "ent")
+
+	rawget(WireLib, "SetColor")(
+	    holoEnt,
+	    Color(
+	        rawget(color, 1),
+	        rawget(color, 2),
+	        rawget(color, 3),
+	        rawget(holoEnt:GetColor(), "a")
+	    )
+	)
 end
 
 e2function void holoColor(index, vector4 color)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	WireLib.SetColor(Holo.ent, Color(color[1],color[2],color[3],color[4]))
+	rawget(WireLib, "SetColor")(
+        rawget(Holo, "ent"),
+        Color(
+            rawget(color, 1),
+            rawget(color, 2),
+            rawget(color, 3),
+            rawget(color, 4)
+        )
+    )
 end
 
 e2function void holoColor(index, vector color, alpha)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	WireLib.SetColor(Holo.ent, Color(color[1],color[2],color[3],alpha))
+	rawget(WireLib, "SetColor")(
+	    rawget(Holo, "ent"),
+	    Color(
+	        rawget(color, 1),
+	        rawget(color, 2),
+	        rawget(color, 3),
+	        alpha
+	    )
+	)
 end
 
 e2function void holoAlpha(index, alpha)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	local c = Holo.ent:GetColor()
-	c.a = alpha
-	WireLib.SetColor(Holo.ent, c)
+	local holoEnt = rawget(Holo, "ent")
+
+	local c = holoEnt:GetColor()
+	rawset(c, a, alpha)
+
+	rawget(WireLib, "SetColor")(holoEnt, c)
 end
 
 __e2setcost(10)
@@ -982,14 +1416,14 @@ e2function void holoShadow(index, has_shadow)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	Holo.ent:DrawShadow( has_shadow ~= 0 )
+	rawget(Holo, "ent"):DrawShadow( has_shadow ~= 0 )
 end
 
 e2function void holoDisableShading( index, disable )
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	Holo.ent:SetNWBool( "disable_shading", disable == 1 )
+	rawget(Holo, "ent"):SetNWBool( "disable_shading", disable == 1 )
 end
 
 -- -----------------------------------------------------------------------------
@@ -997,8 +1431,8 @@ end
 e2function array holoModelList()
 	local mlist = {}
 
-	for k,_ in pairs( ModelList ) do
-	    mlist[#mlist + 1] = k
+	for k in pairs( ModelList ) do
+	    table.insert(mlist, k)
 	end
 
 	return mlist
@@ -1017,7 +1451,8 @@ e2function void holoModel(index, string model)
 	model = GetModel(self, model)
 	if not model then return end
 
-	Holo.ent:SetModel(model)
+	local holoEnt = rawget(Holo, "ent)")
+	rawget(holoEnt, "SetModel")(holoEnt, model)
 end
 
 e2function void holoModel(index, string model, skin)
@@ -1029,33 +1464,37 @@ e2function void holoModel(index, string model, skin)
 	model, skin = GetModel(self, model, skin)
 	if not model then return end
 
-	Holo.ent:SetModel(model)
-	Holo.ent:SetSkin(skin)
+	local holoEnt = rawget(Holo, "ent")
+	rawget(holoEnt, "SetModel")(holoEnt, model)
+	rawget(holoEnt, "SetSkin")(holoEnt, skin)
 end
 
 e2function void holoSkin(index, skin)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	skin = skin - skin % 1
-	local _, skin = GetModel(self, Holo.ent:GetModel(), skin)
+	local holoEnt = rawget(Holo, "ent")
 
-	Holo.ent:SetSkin(skin)
+	skin = skin - skin % 1
+	local _, skin = GetModel(self, rawaget(holoEnt, "GetModel")(holoEnt), skin)
+
+	rawget(holoEnt, "SetSkin")(holoEnt, skin)
 end
 
 e2function void holoMaterial(index, string material)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
-	E2Lib.setMaterial(Holo.ent, material)
+
+	rawget(E2Lib, "setMaterial")(rawget(Holo, "ent"), material)
 end
 
 e2function void holoPlayerColor(index, vector color)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	local r = color[1]/255
-	local g = color[2]/255
-	local b = color[3]/255
+	local r = rawget(color, 1) / 255
+	local g = rawget(color, 2) / 255
+	local b = rawget(color, 3) / 255
 
 	set_player_color(Holo, Vector(r, g, b))
 end
@@ -1065,21 +1504,21 @@ e2function void holoRenderFX(index, effect)
 	if not Holo then return end
 
 	effect = effect - effect % 1
-	Holo.ent:SetKeyValue("renderfx",effect)
+	rawget(Holo, "ent"):SetKeyValue("renderfx",effect)
 end
 
 e2function void holoBodygroup(index, bgrp_id, bgrp_subid)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	Holo.ent:SetBodygroup(bgrp_id, bgrp_subid)
+	rawget(Holo, "ent"):SetBodygroup(bgrp_id, bgrp_subid)
 end
 
 e2function number holoBodygroups(index, bgrp_id)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	return Holo.ent:GetBodygroupCount(bgrp_id)
+	return rawget(Holo, "ent"):GetBodygroupCount(bgrp_id)
 end
 
 -- -----------------------------------------------------------------------------
@@ -1100,19 +1539,26 @@ end
 
 -- -----------------------------------------------------------------------------
 local function Parent_Hologram(holo, ent, attachment)
-	if ent:GetParent() and ent:GetParent():IsValid() and ent:GetParent() == holo.ent then return end
+    local holoEnt = rawget(holo, "ent")
 
-	holo.ent:SetParent(ent)
+    local parent = rawget(ent, "GetParent")(ent)
+	if parent and rawget(parent, "IsValid")(parent) and parent == rawget(holo, "ent") then return end
+
+	rawget(holoEnt, "SetParent")(holoEnt, ent)
 
 	if attachment ~= nil then
-		holo.ent:Fire("SetParentAttachmentMaintainOffset", attachment, 0.01)
+		rawget(holoEnt, "Fire")(holoEnt, "SetParentAttachmentMaintainOffset", attachment, 0.01)
 	end
 end
 
 -- Check for recursive parenting
 local function Check_Parents(child, parent)
-	while IsValid(parent:GetParent()) do
-		parent = parent:GetParent()
+    local getParent = rawget(parent, "GetParent")
+
+	while true do
+		parent = getParent( parent )
+		if not IsValid( parent ) then break end
+
 		if parent == child then
 			return false
 		end
@@ -1129,9 +1575,12 @@ e2function void holoParent(index, otherindex)
 	local Holo2 = CheckIndex(self, otherindex)
 	if not Holo2 then return end
 
-	if not Check_Parents(Holo.ent, Holo2.ent) then return end
+	local holoEnt = rawget(Holo, "ent")
+	local holo2Ent = rawget(Holo2, "ent")
 
-	Parent_Hologram(Holo, Holo2.ent, nil)
+	if not Check_Parents(holoEnt, holo2Ent) then return end
+
+	Parent_Hologram(Holo, holo2Ent, nil)
 end
 
 e2function void holoParent(index, entity ent)
@@ -1139,7 +1588,7 @@ e2function void holoParent(index, entity ent)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	if not Check_Parents(Holo.ent, ent) then return end
+	if not Check_Parents(rawget(Holo, "ent"), ent) then return end
 
 	Parent_Hologram(Holo, ent, nil)
 end
@@ -1156,8 +1605,9 @@ e2function void holoUnparent(index)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	Holo.ent:SetParent(nil)
-	Holo.ent:SetParentPhysNum(0)
+	local holoEnt = rawget(Holo, "ent")
+	rawget(holoEnt, "SetParent")(holoEnt, nil)
+	rawget(holoEnt, "SetParentPhysNum")(holoEnt, 0)
 end
 
 -- -----------------------------------------------------------------------------
@@ -1165,7 +1615,8 @@ end
 __e2setcost(2)
 e2function entity holoEntity(index)
 	local Holo = CheckIndex(self, index)
-	if Holo and IsValid(Holo.ent) then return Holo.ent end
+	local holoEnt = rawget(Holo, "ent")
+	if Holo and IsValid(holoEnt) then return holoEnt end
 end
 
 __e2setcost(30)
@@ -1175,31 +1626,41 @@ e2function number holoIndex(entity ent)
 	if ent:GetClass() ~= "gmod_wire_hologram" then return 0 end
 
 	-- check local holos
-	for k,Holo in pairs(self.data.holos) do
-		if(ent == Holo.ent) then return k end
+	local selfData = rawget(self, "data")
+	local dataHolos = rawget(selfData, "holos")
+	for k, Holo in pairs(dataHolos) do
+		if(ent == rawget(Holo, "ent")) then return k end
 	end
 
 	-- check global holos
-	for k,Holo in pairs(E2HoloRepo[self.uid]) do
-		if isnumber(k) and ent == Holo.ent then return -k end
+	for k, Holo in pairs(rawget(E2HoloRepo, rawget(self, "uid"))) do
+		if isnumber(k) and ent == rawget(Holo, "ent") then return -k end
 	end
+
 	return 0
 end
 
 -- -----------------------------------------------------------------------------
 
 registerCallback("construct", function(self)
-	if not E2HoloRepo[self.uid] then
-		E2HoloRepo[self.uid] = {}
-		PlayerAmount[self.uid] = 0
+    local uid = rawget(self, "uid")
+    local holoRepo = rawget(E2HoloRepo, uid)
+
+	if not holoRepo then
+		rawset(E2HoloRepo, uid, {})
+		rawset(PlayerAmount, uid, 0)
 	end
-	--self.data.HoloEffect = false
-	self.data.holos = {}
-	self.data.holo = {
-		nextSpawn = CurTime()+1,
-		nextBurst = CurTime()+wire_holograms_burst_delay:GetInt(),
+
+	local rightNow = CurTime()
+
+	local selfData = rawget(self, "data")
+	rawset(selfData, "holos", {})
+	rawset(selfData, "holo", {
+		nextSpawn = rightNow + 1,
+		nextBurst = rightNow + wire_holograms_burst_delay:GetInt(),
 		remainingSpawns = wire_holograms_burst_amount:GetInt()
-	}
+
+	})
 end)
 
 registerCallback("destruct", function(self)
@@ -1209,29 +1670,31 @@ end)
 -- -----------------------------------------------------------------------------
 
 local function ConsoleMessage(ply, text)
-	if ply:IsValid() then
-		ply:PrintMessage( HUD_PRINTCONSOLE, text )
+	if rawget(ply, "IsValid")(ply) then
+		rawget(ply, "PrintMessage")( ply, HUD_PRINTCONSOLE, text )
 	else
 		print(text)
 	end
 end
 
 concommand.Add( "wire_holograms_remove_all", function( ply, com, args )
-	if ply:IsValid() and not ply:IsAdmin() then return end
+	if rawget(ply, "IsValid")(ply) and not rawget(ply, "IsAdmin")(ply) then return end
 
 	clearholos_all()
 end )
 
 concommand.Add( "wire_holograms_block", function( ply, com, args )
-	if ply:IsValid() and not ply:IsAdmin() then return end
+	if rawget(ply, "IsValid")(ply) and not rawget(ply, "IsAdmin")(ply) then return end
 
-	if not args[1] then
+	local firstArg = rawget(args, 1)
+
+	if not firstArg then
 		ConsoleMessage( ply, "Command requires a player's name (or part of their name)" )
 		ConsoleMessage( ply, "Usage: wire_holograms_block [name]" )
 		return
 	end
 
-	local name = args[1]:lower()
+	local name = rawget(firstArg, "lower")(firstArg)
 	local players = E2Lib.filterList(player.GetAll(), function(ent) return ent:GetName():lower():match(name) end)
 
 	if #players == 1 then

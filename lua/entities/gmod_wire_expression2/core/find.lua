@@ -3,9 +3,16 @@ E2Lib.RegisterExtension("find", true, "Allows an E2 to search for entities match
 local function table_IsEmpty(t) return not next(t) end
 
 local filterList = E2Lib.filterList
+local mathCos = math.cos
+local mathRad = math.rad
+
+local stringMatch = string.match
+local stringReplace = string.Replace
+local stringFind = string.find
+local stringLower = string.lower
 
 local function replace_match(a,b)
-	return string.match( string.Replace(a,"-","__"), string.Replace(b,"-","__") )
+	return stringMatch( stringReplace(a,"-","__"), stringReplace(b,"-","__") )
 end
 
 -- -- some generic filter criteria -- --
@@ -102,7 +109,7 @@ local function filter_function_result_in_lookup(lookup, func)
 	if table_IsEmpty(lookup) then return filter_none end
 
 	return function(ent)
-		return lookup[func(ent)]
+		return rawget(lookup, func(ent))
 	end
 end
 
@@ -111,7 +118,7 @@ local function filter_function_result_not_in_lookup(lookup, func)
 	if table_IsEmpty(lookup) then return filter_all end
 
 	return function(ent)
-		return not lookup[func(ent)]
+		return not rawget(lookup, func(ent))
 	end
 end
 
@@ -167,7 +174,7 @@ local function filter_and(...)
 		return f ~= filter_all
 	end)
 
-	local combiner = _filter_and[#args]
+	local combiner = rawget(_filter_and, #args)
 	if not combiner then return nil end -- TODO: write generic combiner
 	return combiner(unpack(args))
 end
@@ -195,21 +202,22 @@ local function filter_or(...)
 		return f ~= filter_none
 	end)
 
-	local combiner = _filter_or[#args]
+	local combiner = rawget(_filter_or, #args)
 	if not combiner then return nil end -- TODO: write generic combiner
 	return combiner(unpack(args))
 end
 
 local function invalidate_filters(self)
 	-- Update the filters the next time they are used.
-	self.data.findfilter = nil
+	local selfData = rawget(self, "data")
+	rawset(selfData, "findFilter", nil)
 end
 
 -- This function should be called after the black- or whitelists have changed.
 local function update_filters(self)
 	-- Do not update again until the filters are invalidated the next time.
 
-	local find = self.data.find
+	local find = rawget(rawget(self, "data"), "find")
 
 	---------------------
 	--    blacklist    --
@@ -260,10 +268,12 @@ end
 
 local function applyFindList(self, findlist)
 	local findfilter = self.data.findfilter
+
 	if not findfilter then
 		update_filters(self)
 		findfilter = self.data.findfilter
 	end
+
 	filterList(findlist, findfilter)
 
 	self.data.findlist = findlist
@@ -275,8 +285,8 @@ end
 
 local _findrate = CreateConVar("wire_expression2_find_rate", 0.05,{FCVAR_ARCHIVE,FCVAR_NOTIFY})
 local _maxfinds = CreateConVar("wire_expression2_find_max",10,{FCVAR_ARCHIVE,FCVAR_NOTIFY})
-local function findrate() return _findrate:GetFloat() end
-local function maxfinds() return _maxfinds:GetInt() end
+local function findrate() return rawget(_findrate, "GetFloat")() end
+local function maxfinds() return rawget(_maxfinds, "GetInt")() end
 
 local chiplist = {}
 
@@ -306,13 +316,14 @@ end)
 
 hook.Add("EntityRemoved", "wire_expression2_find_EntityRemoved", function(ent)
 	for chip,_ in pairs(chiplist) do
-		local find = chip.find
-		find.bl_entity[ent] = nil
-		find.bl_owner[ent] = nil
-		find.wl_entity[ent] = nil
-		find.wl_owner[ent] = nil
+		local find = rawget(chip, "find")
 
-		filterList(chip.findlist, function(v) return ent ~= v end)
+		rawset(rawget(find, "bl_entity"), ent, nil)
+		rawset(rawget(find, "bl_owner"), ent, nil)
+		rawset(rawget(find, "wl_entity"), ent, nil)
+		rawset(rawget(find, "wl_owner"), ent, nil)
+
+		filterList(rawget(chip, "findlist"), function(v) return ent ~= v end)
 	end
 end)
 
@@ -334,13 +345,19 @@ end
 -- Adds to the available find calls
 local delay = 0
 local function addcount()
-	if (delay > CurTime()) then return end
-	delay = CurTime() + findrate()
+    local rightNow = CurTime()
+
+	if (delay > rightNow) then return end
+	delay = rightNow + findrate()
 
 	for v,_ in pairs( chiplist ) do
-		if (v and v.findcount and v.findcount < maxfinds()) then
-			v.findcount = v.findcount + 1
-		end
+	    if v then
+	        local findCount = rawget(v, "findcount")
+
+	        if findCount and findCount < maxfinds() then
+                rawset(v, "findcount", findCount + 1)
+            end
+        end
 	end
 end
 hook.Add("Think","Wire_Expression2_Find_AddCount",addcount)
@@ -359,7 +376,7 @@ end
 
 -- Returns the remaining available find calls
 e2function number findCount()
-	return self.data.findcount
+	return rawget(rawget(self, "data"), "findcount")
 end
 
 --[[ This function wasn't used
@@ -380,29 +397,46 @@ __e2setcost(30)
 --- Finds entities in a sphere around V with a radius of N, returns the number found after filtering
 e2function number findInSphere(vector center, radius)
 	if query_blocked(self, 1) then return 0 end
-	center = Vector(center[1], center[2], center[3])
 
-	return applyFindList(self,ents.FindInSphere(center, radius))
+	center = Vector(
+	    rawget(center, 1),
+	    rawget(center, 2),
+	    rawget(center, 3)
+	)
+
+	return applyFindList(self, rawget(ents, "FindInSphere")(center, radius))
 end
 
 --- Like findInSphere but with a [[http://mathworld.wolfram.com/SphericalCone.html Spherical cone]], arguments are for position, direction, length, and degrees (works now)
 e2function number findInCone(vector position, vector direction, length, degrees)
 	if query_blocked(self, 4) then return 0 end
 
-	position = Vector(position[1], position[2], position[3])
-	direction = Vector(direction[1], direction[2], direction[3]):GetNormalized()
+	position = Vector(
+	    rawget(position, 1),
+	    rawget(position, 2),
+	    rawget(position, 3)
+	)
 
-	local findlist = ents.FindInSphere(position, length)
+	direction = rawget(Vector(
+        rawget(direction, 1),
+        rawget(direction, 2),
+        rawget(direction, 3)
+    ), "GetNormalized")()
 
-	local cosDegrees = math.cos(math.rad(degrees))
-	local Dot = direction.Dot
+	local findlist = rawget(ents, "FindInSphere")(position, length)
+
+	local cosDegrees = mathCos(mathRad(degrees))
+	local Dot = rawget(direction, "Dot")
 
 	-- update filter and apply it, together with the cone filter. This is an optimization over applying the two filters in separate passes
-	if not self.data.findfilter then update_filters(self) end
+	local findFilter = rawget(rawget(self, "data"), "findfilter")
+
+	if not findFilter then update_filters(self) end
+
 	filterList(findlist, filter_and(
-		self.data.findfilter,
+		findFilter,
 		function(ent)
-			return Dot(direction, (ent:GetPos() - position):GetNormalized()) > cosDegrees
+			return Dot(direction, (rawget(ent, "GetPos")(ent) - position):GetNormalized()) > cosDegrees
 		end
 	))
 
@@ -413,9 +447,18 @@ end
 --- Like findInSphere but with a globally aligned box, the arguments are the diagonal corners of the box
 e2function number findInBox(vector min, vector max)
 	if query_blocked(self, 1) then return 0 end
-	min = Vector(min[1], min[2], min[3])
-	max = Vector(max[1], max[2], max[3])
-	return applyFindList(self, ents.FindInBox(min, max))
+	min = Vector(
+	    rawget(min, 1),
+	    rawget(min, 2),
+	    rawget(min, 3)
+	)
+
+	max = Vector(
+	    rawget(max, 1),
+	    rawget(max, 2),
+	    rawget(max, 3)
+	)
+	return applyFindList(self, rawget(ents, "FindInBox")(min, max))
 end
 
 --- Find all entities with the given name
@@ -440,7 +483,9 @@ end
 
 local function findPlayer(name)
 	name = string.lower(name)
-	return filterList(player.GetAll(), function(ent) return string.find(string.lower(ent:GetName()), name,1,true) end)[1]
+	return rawget(filterList(rawget(player, "GetAll")(), function(ent)
+	    return stringFind(stringLower(rawget(ent, "GetName")(ent)), name,1,true)
+	end), 1)
 end
 
 --- Returns the player with the given name, this is an exception to the rule
@@ -529,7 +574,7 @@ e2function void findAllowEntities(array arr)
 
 	for _,ent in ipairs(arr) do
 		if not IsValid(ent) then return end
-		bl_entity[ent] = nil
+		rawset(bl_entity, ent, nil)
 	end
 	invalidate_filters(self)
 end
