@@ -5,11 +5,14 @@ local function table_IsEmpty(t) return not next(t) end
 local filterList = E2Lib.filterList
 local mathCos = math.cos
 local mathRad = math.rad
+local mathHuge = math.huge
 
 local stringMatch = string.match
 local stringReplace = string.Replace
 local stringFind = string.find
 local stringLower = string.lower
+
+local tableSort = table.sort
 
 local function replace_match(a,b)
 	return stringMatch( stringReplace(a,"-","__"), stringReplace(b,"-","__") )
@@ -78,7 +81,7 @@ local function filter_default(self)
 end
 
 local function filter_default_without_class_blocklist(self)
-	local chip = self.entity
+	local chip = rawget(self, "entity")
 	return function(ent)
 		return ent ~= chip
 	end
@@ -91,7 +94,7 @@ local function filter_in_lookup(lookup)
 	if table_IsEmpty(lookup) then return filter_none end
 
 	return function(ent)
-		return lookup[ent]
+		return rawget(lookup, ent)
 	end
 end
 
@@ -100,7 +103,7 @@ local function filter_not_in_lookup(lookup)
 	if table_IsEmpty(lookup) then return filter_all end
 
 	return function(ent)
-		return not lookup[ent]
+		return not rawget(lookup, ent)
 	end
 end
 
@@ -267,16 +270,17 @@ local function update_filters(self)
 end
 
 local function applyFindList(self, findlist)
-	local findfilter = self.data.findfilter
+	local findfilter = rawget(rawget(self, "data"), "findfilter")
 
 	if not findfilter then
 		update_filters(self)
-		findfilter = self.data.findfilter
+		findfilter = rawget(self, "data", findfilter)
 	end
 
 	filterList(findlist, findfilter)
 
-	self.data.findlist = findlist
+	rawset(rawget(self, "data"), "findlist", findlist)
+
 	return #findlist
 end
 
@@ -285,8 +289,8 @@ end
 
 local _findrate = CreateConVar("wire_expression2_find_rate", 0.05,{FCVAR_ARCHIVE,FCVAR_NOTIFY})
 local _maxfinds = CreateConVar("wire_expression2_find_max",10,{FCVAR_ARCHIVE,FCVAR_NOTIFY})
-local function findrate() return rawget(_findrate, "GetFloat")() end
-local function maxfinds() return rawget(_maxfinds, "GetInt")() end
+local function findrate() return _findrate:GetFloat() end
+local function maxfinds() return _maxfinds:GetInt() end
 
 local chiplist = {}
 
@@ -331,19 +335,22 @@ end)
 --[[************************************************************************]]--
 
 function query_blocked(self, update)
+
 	if (update) then
-		if (self.data.findcount > 0) then
-			self.data.findcount = self.data.findcount - 1
+	    local dataFindcount = rawget(rawget(self, "data"), "findcount")
+
+		if (dataFindcount > 0) then
+		    rawset(rawget(self, "data"), "findcount", dataFindcount - 1)
 			return false
 		else
 			return true
 		end
 	end
-	return (self.data.findcount < 1)
+
+	return (rawget(rawget(self, "data"), "findcount") < 1)
 end
 
 -- Adds to the available find calls
-local delay = 0
 local function addcount()
     local rightNow = CurTime()
 
@@ -417,11 +424,11 @@ e2function number findInCone(vector position, vector direction, length, degrees)
 	    rawget(position, 3)
 	)
 
-	direction = rawget(Vector(
+	direction = Vector(
         rawget(direction, 1),
         rawget(direction, 2),
         rawget(direction, 3)
-    ), "GetNormalized")()
+    ):GetNormalized()
 
 	local findlist = rawget(ents, "FindInSphere")(position, length)
 
@@ -436,11 +443,12 @@ e2function number findInCone(vector position, vector direction, length, degrees)
 	filterList(findlist, filter_and(
 		findFilter,
 		function(ent)
-			return Dot(direction, (rawget(ent, "GetPos")(ent) - position):GetNormalized()) > cosDegrees
+			return Dot(direction, (ent:GetPos() - position):GetNormalized()) > cosDegrees
 		end
 	))
 
-	self.data.findlist = findlist
+	rawset(rawget(self, "data"), "findlist", findlist)
+
 	return #findlist
 end
 
@@ -464,19 +472,19 @@ end
 --- Find all entities with the given name
 e2function number findByName(string name)
 	if query_blocked(self, 1) then return 0 end
-	return applyFindList(self, ents.FindByName(name))
+	return applyFindList(self, rawget(ents, "FindByName")(name))
 end
 
 --- Find all entities with the given model
 e2function number findByModel(string model)
 	if query_blocked(self, 1) then return 0 end
-	return applyFindList(self, ents.FindByModel(model))
+	return applyFindList(self, rawget(ents, "FindByModel")(model))
 end
 
 --- Find all entities with the given class
 e2function number findByClass(string class)
 	if query_blocked(self, 1) then return 0 end
-	return applyFindList(self, ents.FindByClass(class))
+	return applyFindList(self, rawget(ents, "FindByClass")(class))
 end
 
 --[[************************************************************************]]--
@@ -484,7 +492,7 @@ end
 local function findPlayer(name)
 	name = string.lower(name)
 	return rawget(filterList(rawget(player, "GetAll")(), function(ent)
-	    return stringFind(stringLower(rawget(ent, "GetName")(ent)), name,1,true)
+	    return stringFind(stringLower(ent:GetName()), name,1,true)
 	end), 1)
 end
 
@@ -497,13 +505,13 @@ end
 --- Returns the player with the given SteamID
 e2function entity findPlayerBySteamID(string id)
 	if query_blocked(self, 1) then return NULL end
-	return player.GetBySteamID(id) or NULL
+	return rawget(player, "GetBySteamID")(id) or NULL
 end
 
 --- Returns the player with the given SteamID64
 e2function entity findPlayerBySteamID64(string id)
 	if query_blocked(self, 1) then return NULL end
-	return player.GetBySteamID64(id) or NULL
+	return rawget(player, "GetBySteamID64")(id) or NULL
 end
 
 --[[************************************************************************]]--
@@ -511,13 +519,18 @@ __e2setcost(10)
 
 --- Exclude all entities from <arr> from future finds
 e2function void findExcludeEntities(array arr)
-	local bl_entity = self.data.find.bl_entity
+	local bl_entity = rawget(rawget(rawget(rawget(self, "data"), "find"), "bl_entity")
 	local IsValid = IsValid
 
-	for _,ent in ipairs(arr) do
+	local arrCount = #arr
+
+	for i = 1, arrCount do
+	    local ent = rawget(arr, i)
+
 		if not IsValid(ent) then return end
-		bl_entity[ent] = true
+		rawset(bl_entity, ent, true)
 	end
+
 	invalidate_filters(self)
 end
 
@@ -555,13 +568,13 @@ end
 
 --- Exclude entities with this model (or partial model name) from future finds
 e2function void findExcludeModel(string model)
-	self.data.find.bl_model[string.lower(model)] = true
+	self.data.find.bl_model[stringLower(model)] = true
 	invalidate_filters(self)
 end
 
 --- Exclude entities with this class (or partial class name) from future finds
 e2function void findExcludeClass(string class)
-	self.data.find.bl_class[string.lower(class)] = true
+	self.data.find.bl_class[stringLower(class)] = true
 	invalidate_filters(self)
 end
 
@@ -572,10 +585,13 @@ e2function void findAllowEntities(array arr)
 	local bl_entity = self.data.find.bl_entity
 	local IsValid = IsValid
 
-	for _,ent in ipairs(arr) do
+	local arrCount = #arr
+	for i = 1, arrCount do
+	    local ent = rawget(arr, i)
 		if not IsValid(ent) then return end
 		rawset(bl_entity, ent, nil)
 	end
+
 	invalidate_filters(self)
 end
 
@@ -613,13 +629,13 @@ end
 
 --- Remove entities with this model (or partial model name) from the blacklist
 e2function void findAllowModel(string model)
-	self.data.find.bl_model[string.lower(model)] = nil
+	self.data.find.bl_model[stringLower(model)] = nil
 	invalidate_filters(self)
 end
 
 --- Remove entities with this class (or partial class name) from the blacklist
 e2function void findAllowClass(string class)
-	self.data.find.bl_class[string.lower(class)] = nil
+	self.data.find.bl_class[stringLower(class)] = nil
 	invalidate_filters(self)
 end
 
@@ -630,9 +646,11 @@ e2function void findIncludeEntities(array arr)
 	local wl_entity = self.data.find.wl_entity
 	local IsValid = IsValid
 
-	for _,ent in ipairs(arr) do
+	local arrCount = #arr
+	for i = 1, arrCount do
+	    local ent = rawget(arr, i)
 		if not IsValid(ent) then return end
-		wl_entity[ent] = true
+		rawset(wl_entity, ent, true)
 	end
 	invalidate_filters(self)
 end
@@ -671,13 +689,13 @@ end
 
 --- Include entities with this model (or partial model name) in future finds, and remove others not in the whitelist
 e2function void findIncludeModel(string model)
-	self.data.find.wl_model[string.lower(model)] = true
+	self.data.find.wl_model[stringLower(model)] = true
 	invalidate_filters(self)
 end
 
 --- Include entities with this class (or partial class name) in future finds, and remove others not in the whitelist
 e2function void findIncludeClass(string class)
-	self.data.find.wl_class[string.lower(class)] = true
+	self.data.find.wl_class[stringLower(class)] = true
 	invalidate_filters(self)
 end
 
@@ -688,9 +706,11 @@ e2function void findDisallowEntities(array arr)
 	local wl_entity = self.data.find.wl_entity
 	local IsValid = IsValid
 
-	for _,ent in ipairs(arr) do
+	local arrCount = #arr
+	for i = 1, arrCount do
+	    local ent = rawget(arr, i)
 		if not IsValid(ent) then return end
-		wl_entity[ent] = nil
+		rawset(wl_entity, ent, nil)
 	end
 	invalidate_filters(self)
 end
@@ -833,35 +853,51 @@ end
 --- Returns the closest entity to the given point from the previous find event
 e2function entity findClosest(vector position)
 	local closest = nil
-	local dist = math.huge
-	self.prf = self.prf + #self.data.findlist * 10
-	for _,ent in pairs(self.data.findlist) do
+	local dist = mathHuge
+
+	local findlistLength = #rawget(rawget(self, "data"), "findlist")
+
+	rawset(self, "prf", rawget(self, "prf") + findlistLength * 10)
+
+	for i = 1, findlistLength do
+	    local ent = rawget(findlist, i)
+
 		if IsValid(ent) then
 			local pos = ent:GetPos()
-			local xd, yd, zd = pos.x-position[1], pos.y-position[2], pos.z-position[3]
+			local xd, yd, zd = rawget(pos, "x") - rawget(position, 1), rawget(pos, "y") - rawget(position, 2), rawget(pos, "z") - rawget(position, 3)
 			local curdist = xd*xd + yd*yd + zd*zd
+
 			if curdist < dist then
 				closest = ent
 				dist = curdist
 			end
 		end
+
 	end
+
 	return closest
 end
 
+-- FIXME: did I break this what was this supposed to do
 --- Formats the query as an array, R:entity(Index) to get a entity, R:string to get a description including the name and entity id.
 e2function array findToArray()
 	local tmp = {}
-	for k,v in ipairs(self.data.findlist) do
-		tmp[k] = v
-	end
-	self.prf = self.prf + #tmp / 3
+
+	local findlist = rawget(rawget(self, "data"), "findlist")
+	local findlistCount = #findlist
+
+	for i = 1, findlistCount do
+	    rawset(tmp, i, rawget(findlist, i))
+    end
+
+	rawset(self, "prf", rawget(self, "prf") + #tmp / 3)
 	return tmp
 end
 
 --- Equivalent to findResult(1)
 e2function entity find()
-	return self.data.findlist[1]
+	--return self.data.findlist[1]
+	return rawget(rawget(rawget(self, "data"), "findlist"), 1)
 end
 
 --[[************************************************************************]]--
@@ -869,20 +905,34 @@ __e2setcost(10)
 
 --- Sorts the entities from the last find event, index 1 is the closest to point V, returns the number of entities in the list
 e2function number findSortByDistance(vector position)
-	position = Vector(position[1], position[2], position[3])
-	local findlist = self.data.findlist
-	self.prf = self.prf + #findlist * 12
+
+	position = Vector(
+	    rawget(position, 1),
+	    rawget(position, 2),
+	    rawget(position, 3)
+	)
+
+	local findlist = rawget(rawget(self, "data"), "findlist")
+	local findlistCount = #findlist
+
+	rawset(self, "prf", rawget(self, "prf") + findlistCount * 12)
 
 	local d = {}
-	for i=1, #findlist do
-		local v = findlist[i]
+
+	for i = 1, #findlistCount do
+		local v = rawget(findlist, i)
+
 		if v:IsValid() then
-			d[v] = (position - v:GetPos()):LengthSqr()
+			local posDiff = position - v:GetPos()
+			local len = posDiff:LengthSqr()
+			rawset(d, v, len)
 		else
-			d[v] = math.huge
+			rawset(d, v, mathHuge)
 		end
 	end
-	table.sort(findlist, function(a, b) return d[a] < d[b] end)
+
+	tableSort(findlist, function(a, b) return rawget(d, a) < rawget(d, b) end)
+
 	return #findlist
 end
 
@@ -890,8 +940,8 @@ end
 __e2setcost(5)
 
 local function applyClip(self, filter)
-	local findlist = self.data.findlist
-	self.prf = self.prf + #findlist * 5
+	local findlist = rawget(rawget(self, "data", "findlist")
+	rawset(self, "prf", rawget(self, "prf") + #findlist * 5)
 
 	filterList(findlist, filter)
 
@@ -900,10 +950,11 @@ end
 
 --- Filters the list of entities by removing all entities that are NOT of this class
 e2function number findClipToClass(string class)
-	class = string.lower(class)
+	class = stringLower(class)
+
 	return applyClip(self, function(ent)
 		if !IsValid(ent) then return false end
-		return replace_match(string.lower(ent:GetClass()), class)
+		return replace_match(stringLower(ent:GetClass()), class)
 	end)
 end
 
@@ -911,7 +962,7 @@ end
 e2function number findClipFromClass(string class)
 	return applyClip(self, function(ent)
 		if !IsValid(ent) then return false end
-		return not replace_match(string.lower(ent:GetClass()), class)
+		return not replace_match(stringLower(ent:GetClass()), class)
 	end)
 end
 
@@ -919,7 +970,7 @@ end
 e2function number findClipToModel(string model)
 	return applyClip(self, function(ent)
 		if !IsValid(ent) then return false end
-		return replace_match(string.lower(ent:GetModel() or ""), model)
+		return replace_match(stringLower(ent:GetModel() or ""), model)
 	end)
 end
 
@@ -927,7 +978,7 @@ end
 e2function number findClipFromModel(string model)
 	return applyClip(self, function(ent)
 		if !IsValid(ent) then return false end
-		return not replace_match(string.lower(ent:GetModel() or ""), model)
+		return not replace_match(stringLower(ent:GetModel() or ""), model)
 	end)
 end
 
@@ -935,7 +986,7 @@ end
 e2function number findClipToName(string name)
 	return applyClip(self, function(ent)
 		if !IsValid(ent) then return false end
-		return replace_match(string.lower(ent:GetName()), name)
+		return replace_match(stringLower(ent:GetName()), name)
 	end)
 end
 
@@ -943,13 +994,18 @@ end
 e2function number findClipFromName(string name)
 	return applyClip(self, function(ent)
 		if !IsValid(ent) then return false end
-		return not replace_match(string.lower(ent:GetName()), name)
+		return not replace_match(stringLower(ent:GetName()), name)
 	end)
 end
 
 --- Filters the list of entities by removing all entities NOT within the specified sphere (center, radius)
 e2function number findClipToSphere(vector center, radius)
-	center = Vector(center[1], center[2], center[3])
+	center = Vector(
+	    rawget(center, 1),
+	    rawget(center, 2),
+	    rawget(center, 3)
+	)
+
 	return applyClip(self, function(ent)
 		if !IsValid(ent) then return false end
 		return center:Distance(ent:GetPos()) <= radius
@@ -958,7 +1014,12 @@ end
 
 --- Filters the list of entities by removing all entities within the specified sphere (center, radius)
 e2function number findClipFromSphere(vector center, radius)
-	center = Vector(center[1], center[2], center[3])
+	center = Vector(
+        rawget(center, 1),
+        rawget(center, 2),
+        rawget(center, 3)
+    )
+
 	return applyClip(self, function(ent)
 		if !IsValid(ent) then return false end
 		return center:Distance(ent:GetPos()) > radius
@@ -967,8 +1028,17 @@ end
 
 --- Filters the list of entities by removing all entities NOT on the positive side of the defined plane. (Plane origin, vector perpendicular to the plane) You can define any convex hull using this.
 e2function number findClipToRegion(vector origin, vector perpendicular)
-	origin = Vector(origin[1], origin[2], origin[3])
-	perpendicular = Vector(perpendicular[1], perpendicular[2], perpendicular[3])
+	origin = Vector(
+        rawget(origin, 1),
+        rawget(origin, 2),
+        rawget(origin, 3)
+    )
+
+	perpendicular = Vector(
+	    rawget(perpendicular, 1),
+	    rawget(perpendicular, 2),
+	    rawget(perpendicular, 3)
+	)
 
 	local perpdot = perpendicular:Dot(origin)
 
@@ -980,26 +1050,39 @@ end
 
 -- inrange used in findClip*Box (below)
 local function inrange( vec1, vecmin, vecmax )
-	if (vec1.x < vecmin.x) then return false end
-	if (vec1.y < vecmin.y) then return false end
-	if (vec1.z < vecmin.z) then return false end
+    local vec1x = rawget(vec1, "x")
+    local vec1y = rawget(vec1, "y")
+    local vec1z = rawget(vec1, "z")
 
-	if (vec1.x > vecmax.x) then return false end
-	if (vec1.y > vecmax.y) then return false end
-	if (vec1.z > vecmax.z) then return false end
+    local vecmin1x = rawget(vecmin, "x")
+    local vecmin1y = rawget(vecmin, "y")
+    local vecmin1z = rawget(vecmin, "z")
+
+	if (vec1x < vecminx) then return false end
+	if (vec1y < vecminy) then return false end
+	if (vec1z < vecminz) then return false end
+
+	if (vec1x > vecmaxx) then return false end
+	if (vec1y > vecmaxy) then return false end
+	if (vec1z > vecmaxz) then return false end
 
 	return true
 end
 
 -- If vecmin is greater than vecmax, flip it
 local function sanitize( vecmin, vecmax )
-	for I=1, 3 do
-		if (vecmin[I] > vecmax[I]) then
-			local temp = vecmin[I]
-			vecmin[I] = vecmax[I]
-			vecmax[I] = temp
+	for i = 1, 3 do
+	    local vecminValue = rawget(vecmin, i)
+	    local vecmaxValue = rawget(vecmax, i)
+
+		if (vecminValue > vecmaxValue) then
+			local temp = vecminValue
+
+			rawset(vecmin, i, vecmaxValue)
+			rawset(vecmax, i, temp)
 		end
 	end
+
 	return vecmin, vecmax
 end
 
@@ -1008,8 +1091,17 @@ e2function number findClipFromBox( vector min, vector max )
 
 	min, max = sanitize( min, max )
 
-	min = Vector(min[1], min[2], min[3])
-	max = Vector(max[1], max[2], max[3])
+	min = Vector(
+	    rawget(min, 1),
+	    rawget(min, 2),
+	    rawget(min, 3)
+	)
+
+	max = Vector(
+	    rawget(max, 1),
+	    rawget(max, 2),
+	    rawget(max, 3)
+	)
 
 	return applyClip( self, function(ent)
 		return !inrange(ent:GetPos(),min,max)
@@ -1021,17 +1113,27 @@ e2function number findClipToBox( vector min, vector max )
 
 	min, max = sanitize( min, max )
 
-	min = Vector(min[1], min[2], min[3])
-	max = Vector(max[1], max[2], max[3])
+	min = Vector(
+	    rawget(min, 1),
+	    rawget(min, 2),
+	    rawget(min, 3)
+	)
+
+	max = Vector(
+	    rawget(max, 1),
+	    rawget(max, 2),
+	    rawget(max, 3)
+	)
 
 	return applyClip( self, function(ent)
-		return inrange(ent:GetPos(),min,max)
+		return inrange(ent:GetPos(), min, max)
 	end)
 end
 
 -- Filters the list of entities by removing all entities equal to this entity
 e2function number findClipFromEntity( entity ent )
 	if !IsValid( ent ) then return -1 end
+
 	return applyClip( self, function( ent2 )
 		if !IsValid(ent2) then return false end
 		return ent != ent2
@@ -1041,8 +1143,15 @@ end
 -- Filters the list of entities by removing all entities equal to one of these entities
 e2function number findClipFromEntities( array entities )
 	local lookup = {}
+
 	self.prf = self.prf + #entities / 3
-	for k,v in ipairs( entities ) do lookup[v] = true end
+
+	local entCount = #entities
+	for i = 1, entCount do
+	    local entValue = rawget(entities, i)
+	    rawset(lookup, entValue, true)
+    end
+
 	return applyClip( self, function( ent )
 		if !IsValid(ent) then return false end
 		return !lookup[ent]
@@ -1061,11 +1170,18 @@ end
 -- Filters the list of entities by removing all entities not equal to one of these entities
 e2function number findClipToEntities( array entities )
 	local lookup = {}
-	self.prf = self.prf + #entities / 3
-	for k,v in ipairs( entities ) do lookup[v] = true end
+	local entCount = #entities
+
+	rawset(self, "prf", rawget(self, "prf") + entCount / 3)
+
+	for i = 1, entCount do
+	    local v = rawget(entities, i)
+	    rawset(lookup, v, true)
+    end
+
 	return applyClip( self, function( ent )
 		if !IsValid(ent) then return false end
-		return lookup[ent]
+		return rawget(lookup, ent)
 	end)
 end
 
