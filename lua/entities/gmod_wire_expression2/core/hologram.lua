@@ -209,7 +209,7 @@ local function add_queue( queue, ply, data )
 	end
 
 	local plyQueueSize = #plyqueue
-	if plyQueueSize == rawget(wire_holograms_max, "GetInt")(wire_holograms_max) then return end
+	if plyQueueSize == wire_holograms_max:GetInt() then return end
 
 	tableInsert( plyqueue, data )
 end
@@ -248,7 +248,7 @@ local function remove_holo( Holo )
 
 	if IsValid(holoEnt) then
 		remove_from_queues( holoEnt )
-		rawget(holoEnt, "Remove")(holoEnt)
+		holoEnt:Remove()
 	end
 end
 
@@ -371,7 +371,7 @@ local function flush_player_color_queue()
 
 			for _,Holo,color in ipairs_map(plyqueue, unpack) do
 			    local holoEnt = rawget(Holo, "ent")
-				netWriteUInt(rawget(holoEnt, "EntIndex")(holoEnt), 16)
+				netWriteUInt(holoEnt:EntIndex(),  16)
 				netWriteVector(color)
 			end
 
@@ -516,7 +516,7 @@ local function set_visible(Holo, players, visible)
         local ply = rawget(players, i)
         local plyVisibility = rawget(rawget(Holo, "visible"), ply)
 
-		if IsValid( ply ) and rawget(ply, "IsPlayer")(ply) and plyVisibility ~= visible then
+		if IsValid( ply ) and ply:IsPlayer() and plyVisibility ~= visible then
 		    rawset(rawget(Holo, "visible"), ply, visible)
 			add_queue( vis_queue, ply, { Holo, visible } )
 		end
@@ -622,9 +622,9 @@ local function MakeHolo(Player, Pos, Ang, model)
 	rawget(WireLib, "setPos")(prop, Pos)
 	rawget(WireLib, "setAng")(prop, Ang)
 
-	rawget(prop, "SetModel")(prop, model)
-	rawget(prop, "SetPlayer")(prop, Player)
-	rawget(prop, "SetNWInt")(prop, "ownerid", rawget(Player, "UserID")(Player))
+	prop:SetModel(model)
+	prop:SetPlayer(Player)
+	prop:SetNWInt(ownerid, Player:UserID())
 
 	return prop
 end
