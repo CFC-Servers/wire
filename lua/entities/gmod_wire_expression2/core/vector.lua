@@ -325,13 +325,13 @@ end
 __e2setcost(5)
 
 e2function vector vector:rotate( angle ang )
-	local v = Vector(rawget(this, 1), rawget(this, 2), rawget(this, 3)
-	v:Rotate(Angle(rawget(ang, 1), rawget(ang, 2), rawget(ang, 3))
+	local v = Vector(rawget(this, 1), rawget(this, 2), rawget(this, 3))
+	v:Rotate(Angle(rawget(ang, 1), rawget(ang, 2), rawget(ang, 3)))
 	return v
 end
 
 e2function vector vector:rotate( normal pitch, normal yaw, normal roll )
-	local v = Vector(rawget(this, 1), rawget(this, 2), rawget(this, 3)
+	local v = Vector(rawget(this, 1), rawget(this, 2), rawget(this, 3))
 	v:Rotate(Angle(pitch, yaw, roll))
 	return v
 end

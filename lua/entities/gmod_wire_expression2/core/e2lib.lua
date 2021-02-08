@@ -686,6 +686,7 @@ do
 
 		function printExtensions( ply, str )
             local prettyList = rawget( extensions, "prettyList" )
+            local prettyListCount = #prettyList
 
 			if IsValid( ply ) then
 			    local printMessage = rawget( ply, "PrintMessage" )
@@ -696,7 +697,7 @@ do
 				end
 			else
 				if str then print( str ) end
-				for i = 1, prettyList do print( rawget( prettyList, i ) ) end
+				for i = 1, prettyListCount do print( rawget( prettyList, i ) ) end
 			end
 		end
 

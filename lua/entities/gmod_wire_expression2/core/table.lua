@@ -295,7 +295,7 @@ registerOperator( "kvtable", "", "t", function( self, args )
 	local s, stypes, n, ntypes = {}, {}, {}, {}
 
 	local size = 0
-	for k,v in pairs( rawget()args, 2) ) do
+	for k,v in pairs( rawget(args, 2) ) do
 		if not blocked_types[types[k]] then
 			local key = k[1]( self, k )
 

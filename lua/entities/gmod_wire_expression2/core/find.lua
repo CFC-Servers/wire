@@ -940,7 +940,7 @@ end
 __e2setcost(5)
 
 local function applyClip(self, filter)
-	local findlist = rawget(rawget(self, "data", "findlist")
+	local findlist = rawget(rawget(self, "data", "findlist"))
 	rawset(self, "prf", rawget(self, "prf") + #findlist * 5)
 
 	filterList(findlist, filter)
