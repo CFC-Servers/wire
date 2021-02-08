@@ -61,12 +61,12 @@ e2function vector vec(vector2 v2, z)
 end
 
 e2function vector vec(vector4 v4)
-	return { v4[1], v4[2], v4[]3] }
+	return { v4[1], v4[2], v4[3] }
 end
 
 --- Convert Angle -> Vector
 e2function vector vec(angle ang)
-	return { ang[1], ang[2], ang[]3] }
+	return { ang[1], ang[2], ang[3] }
 end
 
 --------------------------------------------------------------------------------
@@ -131,11 +131,11 @@ end
 --------------------------------------------------------------------------------
 
 e2function vector vector:operator_neg()
-	return { -this[1], -this[2], -this[]3] }
+	return { -this[1], -this[2], -this[3] }
 end
 
 e2function vector operator+(lhs, vector rhs)
-	return { lhs + rhs[1], lhs + rhs[2], lhs + rhs[]3] }
+	return { lhs + rhs[1], lhs + rhs[2], lhs + rhs[3] }
 end
 
 e2function vector operator+(vector lhs, rhs)
@@ -143,11 +143,11 @@ e2function vector operator+(vector lhs, rhs)
 end
 
 e2function vector operator+(vector lhs, vector rhs)
-	return { lhs[1] + rhs[1], lhs[2] + rhs[2], lhs[3] + rhs[]3] }
+	return { lhs[1] + rhs[1], lhs[2] + rhs[2], lhs[3] + rhs[3] }
 end
 
 e2function vector operator-(lhs, vector rhs)
-	return { lhs - rhs[1], lhs - rhs[2], lhs - rhs[]3] }
+	return { lhs - rhs[1], lhs - rhs[2], lhs - rhs[3] }
 end
 
 e2function vector operator-(vector lhs, rhs)
@@ -155,11 +155,11 @@ e2function vector operator-(vector lhs, rhs)
 end
 
 e2function vector operator-(vector lhs, vector rhs)
-	return { lhs[1] - rhs[1], lhs[2] - rhs[2], lhs[3] - rhs[]3] }
+	return { lhs[1] - rhs[1], lhs[2] - rhs[2], lhs[3] - rhs[3] }
 end
 
 e2function vector operator*(lhs, vector rhs)
-	return { lhs * rhs[1], lhs * rhs[2], lhs * rhs[]3] }
+	return { lhs * rhs[1], lhs * rhs[2], lhs * rhs[3] }
 end
 
 e2function vector operator*(vector lhs, rhs)
@@ -167,11 +167,11 @@ e2function vector operator*(vector lhs, rhs)
 end
 
 e2function vector operator*(vector lhs, vector rhs)
-	return { lhs[1] * rhs[1], lhs[2] * rhs[2], lhs[3] * rhs[]3] }
+	return { lhs[1] * rhs[1], lhs[2] * rhs[2], lhs[3] * rhs[3] }
 end
 
 e2function vector operator/(lhs, vector rhs)
-	return { lhs / rhs[1], lhs / rhs[2], lhs / rhs[]3] }
+	return { lhs / rhs[1], lhs / rhs[2], lhs / rhs[3] }
 end
 
 e2function vector operator/(vector lhs, rhs)
@@ -179,7 +179,7 @@ e2function vector operator/(vector lhs, rhs)
 end
 
 e2function vector operator/(vector lhs, vector rhs)
-	return { lhs[1] / rhs[1], lhs[2] / rhs[2], lhs[3] / rhs[]3] }
+	return { lhs[1] / rhs[1], lhs[2] / rhs[2], lhs[3] / rhs[3] }
 end
 
 e2function number vector:operator[](index)
@@ -429,12 +429,12 @@ __e2setcost(2)
 
 --- SET method that returns a new vector with x replaced
 e2function vector vector:setX(x)
-	return { x, this[2], this[]3] }
+	return { x, this[2], this[3] }
 end
 
 --- SET method that returns a new vector with y replaced
 e2function vector vector:setY(y)
-	return { this[1], y, this[]3] }
+	return { this[1], y, this[3] }
 end
 
 --- SET method that returns a new vector with z replaced
