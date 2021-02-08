@@ -776,8 +776,8 @@ do
 	-- shared stuff
 
 	local function makeAutoCompleteList( cmd, args )
-	    local trimmed = rawget(args, "Trim")(args)
-	    local args = rawget(trimmed, "lower")(trimmed)
+	    local trimmed = args:Trim()
+	    local args = trimmed:lower()
 
 		local status, list, tbl, j = tobool( rawget(cmd, "find")(cmd, "enable" ) ), rawget(extensions, "list"), {}, 1
 
@@ -786,7 +786,7 @@ do
 			local name = rawget(list, i)
 			local status = rawget(extensions, "status")
 
-			if rawget( status, name ) ~= status and rawget( name, "find" )( name, args ) then
+			if rawget( status, name ) ~= status and name:find( args ) then
 			    rawset(tbl, j, cmd .. " " .. name)
 				j = j + 1
 			end
@@ -889,4 +889,4 @@ hook.Add("InitPostEntity", "e2lib", function()
 			end)
 		end
 	end
-end)
+end
