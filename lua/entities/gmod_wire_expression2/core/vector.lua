@@ -803,7 +803,7 @@ end
 
 e2function number bearing(vector originpos,angle originangle, vector pos)
 	pos = WorldToLocal(Vector(rawget(pos, 1),rawget(pos, 2),rawget(pos, 3),Angle(0,0,0),Vector(rawget(originpos, 1),rawget(originpos, 2),rawget(originpos, 3),Angle(rawget(originangle, 1),rawget(originangle, 2),rawget(originangle, 3)))))
-	return rad2deg*-atan2(rawget(pos, "y"), rawget(pos, "x")
+	return rad2deg*-atan2(rawget(pos, "y"), rawget(pos, "x"))
 end
 
 e2function number elevation(vector originpos,angle originangle, vector pos)
@@ -836,7 +836,7 @@ __e2setcost( 5 )
 
 --- Gets the vector nicely formatted as a string "[X,Y,Z]"
 e2function string toString(vector v)
-	return ("[%s,%s,%s]"):format(rawget(v, 1),rawget(v, 2),rawget(v, 3)
+	return ("[%s,%s,%s]"):format(rawget(v, 1),rawget(v, 2),rawget(v, 3))
 end
 
 --- Gets the vector nicely formatted as a string "[X,Y,Z]"
