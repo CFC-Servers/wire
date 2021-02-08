@@ -24,7 +24,7 @@ local StoreEntityModifier = duplicator.StoreEntityModifier
 
 local mathClamp = math.Clamp
 local mathHuge = math.huge
-local mathFloor = math.foor
+local mathFloor = math.floor
 local mathMax = math.max
 
 local isSinglePlayer = game.SinglePlayer()
