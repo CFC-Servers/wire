@@ -538,12 +538,12 @@ do
 
 	-- escapes special characters
 	function E2Lib.encode(str)
-		return rawget(str, "gsub")(str, ".", enctbl)
+	    return str:gsub(".", enctbl)
 	end
 
 	-- decodes escaped characters
 	function E2Lib.decode(encoded)
-		return rawget(encoded, "gsub")(encoded, "%%(..)", dectbl)
+		return encoded:gsub("%%(..)", dectbl)
 	end
 end
 
