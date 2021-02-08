@@ -1306,13 +1306,13 @@ do
 				local bindingIndex = net.ReadUInt(5)
 				if button > BUTTON_CODE_NONE and button <= BUTTON_CODE_LAST then
 					local binding = interestingBinds[bindingIndex]
-					rawset(rawget(ply, "SyncedBindings"), button, binding)
+					rawset(ply.SyncedBindings, button, binding)
 				end
 			end
 		end)
 
 		hook.Add("PlayerButtonDown", MESSAGE_NAME, function(ply, button)
-		    local syncedBindings = rawget(ply, "SyncedBindings")
+		    local syncedBindings = ply.SyncedBindings
 
 			if not syncedBindings then return end
 			local binding = rawget(sycnedBindings, button)
@@ -1320,7 +1320,7 @@ do
 		end)
 
 		hook.Add("PlayerButtonUp", MESSAGE_NAME, function(ply, button)
-		    local syncedBindings = rawget(ply, "SyncedBindings")
+		    local syncedBindings = ply.SyncedBindings
 			if not syncedBindings then return end
 			local binding = rawget(sycnedBindings, button)
 
@@ -1328,7 +1328,7 @@ do
 		end)
 
 		hook.Add("StartCommand", MESSAGE_NAME, function(ply, command)
-		    local syncedBindings = rawget(ply, "SyncedBindings")
+		    local syncedBindings = ply.SyncedBindings
 			if not syncedBindings then return end
 
 			local wheel = command:GetMouseWheel()
