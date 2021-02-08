@@ -274,7 +274,7 @@ local function applyFindList(self, findlist)
 
 	if not findfilter then
 		update_filters(self)
-		findfilter = rawget(self, "data", findfilter)
+		findfilter = rawget(self, "data", "findfilter")
 	end
 
 	filterList(findlist, findfilter)
