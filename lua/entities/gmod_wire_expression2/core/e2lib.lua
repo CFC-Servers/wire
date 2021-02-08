@@ -559,8 +559,8 @@ do
 	end
 
 	function E2Lib.GetExtensionStatus(name)
-		name = rawget(name, "Trim")(name)
-		name = rawget(name, "lower")(name)
+	    name = name:Trim()
+	    name = name:lower()
 		return rawget(rawget(extensions, "status"), name)
 	end
 
