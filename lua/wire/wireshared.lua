@@ -1315,14 +1315,14 @@ do
 		    local syncedBindings = ply.SyncedBindings
 
 			if not syncedBindings then return end
-			local binding = rawget(sycnedBindings, button)
+			local binding = rawget(syncedBindings, button)
 			hook.Run("PlayerBindDown", ply, binding, button)
 		end)
 
 		hook.Add("PlayerButtonUp", MESSAGE_NAME, function(ply, button)
 		    local syncedBindings = ply.SyncedBindings
 			if not syncedBindings then return end
-			local binding = rawget(sycnedBindings, button)
+			local binding = rawget(syncedBindings, button)
 
 			hook.Run("PlayerBindUp", ply, binding, button)
 		end)
