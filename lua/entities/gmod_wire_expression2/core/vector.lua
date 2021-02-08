@@ -663,12 +663,12 @@ end
 __e2setcost(3)
 
 e2function angle vector:toAngle()
-	local angle = Vector(rawget(this, 1), rawget(this, 2), rawget(this, 3):Angle()
+	local angle = Vector(rawget(this, 1), rawget(this, 2), rawget(this, 3)):Angle()
 	return { angle.p, angle.y, angle.r }
 end
 
 e2function angle vector:toAngle(vector up)
-	local angle = Vector(rawget(this, 1), rawget(this, 2), rawget(this, 3):AngleEx(Vector(up[1], up[2], up[3]))
+	local angle = Vector(rawget(this, 1), rawget(this, 2), rawget(this, 3)):AngleEx(Vector(up[1], up[2], up[3]))
 	return { angle.p, angle.y, angle.r }
 end
 
