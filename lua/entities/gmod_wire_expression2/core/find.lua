@@ -354,8 +354,8 @@ end
 local function addcount()
     local rightNow = CurTime()
 
-	if (delay > rightNow) then return end
 	delay = rightNow + findrate()
+	if (delay > rightNow) then return end
 
 	for v,_ in pairs( chiplist ) do
 	    if v then

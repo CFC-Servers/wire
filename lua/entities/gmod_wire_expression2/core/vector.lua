@@ -445,9 +445,9 @@ end
 
 e2function vector ceil( vector rv1 )
 	return {
-		ceil(rawget(rv1, 1),
-		ceil(rawget(rv1, 2),
-		ceil(rawget(rv1, 3)
+		ceil(rawget(rv1, 1)),
+		ceil(rawget(rv1, 2)),
+		ceil(rawget(rv1, 3))
 	}
 end
 
@@ -462,9 +462,9 @@ end
 
 e2function vector floor(vector rv1)
 	return {
-		floor(rawget(rv1, 1),
-		floor(rawget(rv1, 2),
-		floor(rawget(rv1, 3)
+		floor(rawget(rv1, 1)),
+		floor(rawget(rv1, 2)),
+		floor(rawget(rv1, 3))
 	}
 end
 
