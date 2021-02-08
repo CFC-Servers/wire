@@ -519,7 +519,7 @@ __e2setcost(10)
 
 --- Exclude all entities from <arr> from future finds
 e2function void findExcludeEntities(array arr)
-	local bl_entity = rawget(rawget(rawget(rawget(self, "data"), "find"), "bl_entity")
+	local bl_entity = rawget(rawget(rawget(rawget(self, "data"), "find"), "bl_entity"))
 	local IsValid = IsValid
 
 	local arrCount = #arr
