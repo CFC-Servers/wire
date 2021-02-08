@@ -231,11 +231,17 @@ end
 __e2setcost(5)
 
 e2function number vector:length()
-	return (rawget(this, 1) * rawget(this, 1) + rawget(this, 2) * rawget(this, 2) + rawget(this, 3) * rawget(this, 3) ^ 0.5
+    local this1 = rawget(this, 1)
+    local this2 = rawget(this, 2)
+    local this3 = rawget(this, 3)
+    return ((this1 * this1) + (this2 * this2) + (this3 * this3)) ^ 0.5
 end
 
 e2function number vector:length2()
-	return rawget(this, 1) * rawget(this, 1) + rawget(this, 2) * rawget(this, 2) + rawget(this, 3) * rawget(this, 3)
+    local this1 = rawget(this, 1)
+    local this2 = rawget(this, 2)
+    local this3 = rawget(this, 3)
+    return (this1 * this1) + (this2 * this2) + (this3 * this3)
 end
 
 e2function number vector:distance(vector other)
@@ -249,9 +255,13 @@ e2function number vector:distance2( vector other )
 end
 
 e2function vector vector:normalized()
-	local len = (rawget(this, 1) * rawget(this, 1) + rawget(this, 2) * rawget(this, 2) + rawget(this, 3) * rawget(this, 3) ^ 0.5
+    local this1 = rawget(this, 1)
+    local this2 = rawget(this, 2)
+    local this3 = rawget(this, 3)
+	local len = ((this1 * this1) + (this2 * this2) + (this3 * this3)) ^ 0.5
+
 	if len > delta then
-		return { rawget(this, 1) / len, rawget(this, 2) / len, rawget(this, 3) / len }
+		return { this1 / len, this2 / len, this3 / len }
 	else
 		return { 0, 0, 0 }
 	end
@@ -262,10 +272,18 @@ e2function number vector:dot( vector other )
 end
 
 e2function vector vector:cross( vector other )
+    local this1 = rawget(this, 1)
+    local this2 = rawget(this, 2)
+    local this3 = rawget(this, 3)
+
+    local other1 = rawget(other, 1)
+    local other2 = rawget(other, 2)
+    local other3 = rawget(other, 3)
+
 	return {
-		rawget(this, 2) * rawget(other, 3) - rawget(this, 3) * rawget(other, 2),
-		rawget(this, 3) * rawget(other, 1) - rawget(this, 1) * rawget(other, 3),
-		rawget(this, 1) * rawget(other, 2) - rawget(this, 2) * rawget(other, 1),
+		this2 * other3 - this3 * other2,
+		this3 * other1 - this1 * other3,
+		this1 * other2 - this2 * other1
 	}
 end
 
@@ -273,23 +291,35 @@ __e2setcost(10)
 
 --- returns the outer product (tensor product) of two vectors
 e2function matrix vector:outerProduct( vector other )
+    local this1 = rawget(this, 1)
+    local this2 = rawget(this, 2)
+    local this3 = rawget(this, 3)
+
+    local other1 = rawget(other, 1)
+    local other2 = rawget(other, 2)
+    local other3 = rawget(other, 3)
+
 	return {
-		rawget(this, 1) * rawget(this, 1), rawget(this, 1) * rawget(other, 2), rawget(this, 1) * rawget(other, 3),
-		rawget(this, 2) * rawget(this, 1), rawget(this, 2) * rawget(other, 2), rawget(this, 2) * rawget(other, 3),
-		rawget(this, 3) * rawget(this, 1), rawget(this, 3) * rawget(other, 2), rawget(this, 3) * rawget(other, 3),
+		this1 * this1, this1 * other2, this1 * other3,
+		this2 * this1, this2 * other2, this2 * other3,
+		this3 * this1, this3 * other2, this3 * other3,
 	}
 end
 
 __e2setcost(15)
 e2function vector vector:rotateAroundAxis(vector axis, degrees)
+    local this1 = rawget(this, 1)
+    local this2 = rawget(this, 2)
+    local this3 = rawget(this, 3)
+
 	local ca, sa = mathCos(degrees*deg2rad), mathSin(degrees*deg2rad)
 	local x,y,z = rawget(axis, 1), rawget(axis, 2), rawget(axis, 3)
 	local length = (x*x+y*y+z*z)^0.5
 	x,y,z = x/length, y/length, z/length
 
-	return {(ca + (x^2)*(1-ca)) * rawget(this, 1) + (x*y*(1-ca) - z*sa) * rawget(this, 2) + (x*z*(1-ca) + y*sa) * rawget(this, 3),
-			(y*x*(1-ca) + z*sa) * rawget(this, 1) + (ca + (y^2)*(1-ca)) * rawget(this, 2) + (y*z*(1-ca) - x*sa) * rawget(this, 3),
-			(z*x*(1-ca) - y*sa) * rawget(this, 1) + (z*y*(1-ca) + x*sa) * rawget(this, 2) + (ca + (z^2)*(1-ca)) * rawget(this, 3)}
+	return {(ca + (x^2)*(1-ca)) * this1 + (x*y*(1-ca) - z*sa) * this2 + (x*z*(1-ca) + y*sa) * this3,
+			(y*x*(1-ca) + z*sa) * this1 + (ca + (y^2)*(1-ca)) * this2 + (y*z*(1-ca) - x*sa) * this3,
+			(z*x*(1-ca) - y*sa) * this1 + (z*y*(1-ca) + x*sa) * this2 + (ca + (z^2)*(1-ca)) * this3}
 end
 
 __e2setcost(5)
@@ -307,16 +337,23 @@ e2function vector vector:rotate( normal pitch, normal yaw, normal roll )
 end
 
 e2function vector2 vector:dehomogenized()
+    local this1 = rawget(this, 1)
+    local this2 = rawget(this, 2)
+
 	local w = rawget(this, 3)
-	if w == 0 then return { rawget(this, 1), rawget(this, 2) } end
-	return { rawget(this, 1)/w, rawget(this, 2)/w }
+	if w == 0 then return { this1, this2 } end
+	return { this1/w, this2/w }
 end
 
 e2function vector positive(vector rv1)
+    local rv1_1 = rawget(rv1, 1)
+    local rv1_2 = rawget(rv1, 2)
+    local rv1_3 = rawget(rv1, 3)
+
 	return {
-		rawget(rv1, 1) >= 0 and rawget(rv1, 1) or -rawget(rv1, 1),
-		rawget(rv1, 2) >= 0 and rawget(rv1, 2) or -rawget(rv1, 2),
-		rawget(rv1, 3) >= 0 and rawget(rv1, 3) or -rawget(rv1, 3),
+		rv1_1 >= 0 and rv1_1 or -rv1_1,
+		rv1_2 >= 0 and rv1_2 or -rv1_2,
+		rv1_3 >= 0 and rv1_3 or -rv1_3,
 	}
 end
 
@@ -444,49 +481,93 @@ __e2setcost(10)
 
 --- min/max based on vector length - returns shortest/longest vector
 e2function vector min(vector rv1, vector rv2)
-	local length1 = ( rawget(rv1, 1) * rawget(rv1, 1) + rawget(rv1, 2) * rawget(rv1, 2) + rawget(rv1, 3) * rawget(rv1, 3) ) ^ 0.5
-	local length2 = ( rv2[1] * rv2[1] + rv2[2] * rv2[2] + rv2[3] * rv2[3] ) ^ 0.5
+    local rv1_1 = rawget(rv1, 1)
+    local rv1_2 = rawget(rv1, 2)
+    local rv1_3 = rawget(rv1, 3)
+
+    local rv2_1 = rawget(rv2, 1)
+    local rv2_2 = rawget(rv2, 2)
+    local rv2_3 = rawget(rv2, 3)
+
+	local length1 = ( rv1_1 * rv1_1 + rv1_2 * rv1_2 + rv1_3 * rv1_3 ) ^ 0.5
+	local length2 = ( rv2_1 * rv2_1 + rv2_2 * rv2_2 + rv2_3 * rv2_3 ) ^ 0.5
 	if length1 < length2 then return rv1 else return rv2 end
 end
 
 e2function vector max(vector rv1, vector rv2)
-	local length1 = ( rawget(rv1, 1) * rawget(rv1, 1) + rawget(rv1, 2) * rawget(rv1, 2) + rawget(rv1, 3) * rawget(rv1, 3) ) ^ 0.5
-	local length2 = ( rv2[1] * rv2[1] + rv2[2] * rv2[2] + rv2[3] * rv2[3] ) ^ 0.5
+    local rv1_1 = rawget(rv1, 1)
+    local rv1_2 = rawget(rv1, 2)
+    local rv1_3 = rawget(rv1, 3)
+
+    local rv2_1 = rawget(rv2, 1)
+    local rv2_2 = rawget(rv2, 2)
+    local rv2_3 = rawget(rv2, 3)
+
+	local length1 = ( rv1_1 * rv1_1 + rv1_2 * rv1_2 + rv1_3 * rv1_3 ) ^ 0.5
+	local length2 = ( rv2_1 * rv2_1 + rv2_2 * rv2_2 + rv2_3 * rv2_3 ) ^ 0.5
 	if length1 > length2 then return rv1 else return rv2 end
 end
 
 --- component-wise min/max
 e2function vector maxVec(vector rv1, vector rv2)
+    local rv1_1 = rawget(rv1, 1)
+    local rv1_2 = rawget(rv1, 2)
+    local rv1_3 = rawget(rv1, 3)
+
+    local rv2_1 = rawget(rv2, 1)
+    local rv2_2 = rawget(rv2, 2)
+    local rv2_3 = rawget(rv2, 3)
+
 	return {
-		rawget(rv1, 1) > rv2[1] and rawget(rv1, 1) or rv2[1],
-		rawget(rv1, 2) > rv2[2] and rawget(rv1, 2) or rv2[2],
-		rawget(rv1, 3) > rv2[3] and rawget(rv1, 3) or rv2[3],
+		rv1_1 > rv2_1 and rv1_1 or rv2_1,
+		rv1_2 > rv2_2 and rv1_2 or rv2_2,
+		rv1_3 > rv2_3 and rv1_3 or rv2_3,
 	}
 end
 
 e2function vector minVec(vector rv1, vector rv2)
+    local rv1_1 = rawget(rv1, 1)
+    local rv1_2 = rawget(rv1, 2)
+    local rv1_3 = rawget(rv1, 3)
+
+    local rv2_1 = rawget(rv2, 1)
+    local rv2_2 = rawget(rv2, 2)
+    local rv2_3 = rawget(rv2, 3)
+
 	return {
-		rawget(rv1, 1) < rv2[1] and rawget(rv1, 1) or rv2[1],
-		rawget(rv1, 2) < rv2[2] and rawget(rv1, 2) or rv2[2],
-		rawget(rv1, 3) < rv2[3] and rawget(rv1, 3) or rv2[3],
+		rv1_1 < rv2_1 and rv1_1 or rv2_1,
+		rv1_2 < rv2_2 and rv1_2 or rv2_2,
+		rv1_3 < rv2_3 and rv1_3 or rv2_3,
 	}
 end
 
 --- Performs modulo on x,y,z separately
 e2function vector mod(vector rv1, rv2)
+    local rv1_1 = rawget(rv1, 1)
+    local rv1_2 = rawget(rv1, 2)
+    local rv1_3 = rawget(rv1, 3)
+
 	return {
-		rawget(rv1, 1) >= 0 and rawget(rv1, 1) % rv2 or rawget(rv1, 1) % -rv2,
-		rawget(rv1, 2) >= 0 and rawget(rv1, 2) % rv2 or rawget(rv1, 2) % -rv2,
-		rawget(rv1, 3) >= 0 and rawget(rv1, 3) % rv2 or rawget(rv1, 3) % -rv2,
+		rv1_1 >= 0 and rv1_1 % rv2 or rv1_1 % -rv2,
+		rv1_2 >= 0 and rv1_2 % rv2 or rv1_2 % -rv2,
+		rv1_3 >= 0 and rv1_3 % rv2 or rv1_3 % -rv2,
 	}
 end
 
 --- Modulo where divisors are defined as a vector
 e2function vector mod(vector rv1, vector rv2)
+    local rv1_1 = rawget(rv1, 1)
+    local rv1_2 = rawget(rv1, 2)
+    local rv1_3 = rawget(rv1, 3)
+
+    local rv2_1 = rawget(rv2, 1)
+    local rv2_2 = rawget(rv2, 2)
+    local rv2_3 = rawget(rv2, 3)
+
 	return {
-		rawget(rv1, 1) >= 0 and rawget(rv1, 1) % rv2[1] or rawget(rv1, 1) % -rv2[1],
-		rawget(rv1, 2) >= 0 and rawget(rv1, 2) % rv2[2] or rawget(rv1, 2) % -rv2[2],
-		rawget(rv1, 3) >= 0 and rawget(rv1, 3) % rv2[3] or rawget(rv1, 3) % -rv2[3],
+		rv1_1 >= 0 and rv1_1 % rv2_1 or rv1_1 % -rv2_1,
+		rv1_2 >= 0 and rv1_2 % rv2_2 or rv1_2 % -rv2_2,
+		rv1_3 >= 0 and rv1_3 % rv2_3 or rv1_3 % -rv2_3,
 	}
 end
 
@@ -494,17 +575,29 @@ end
 e2function vector clamp(vector value, vector min, vector max)
 	local x,y,z
 
-	if rawget(value, 1) < rawget(min, 1) then x = rawget(min, 1)
-	elseif rawget(value, 1) > rawget(max, 1) then x = rawget(max, 1)
-	else x = rawget(value, 1) end
+	local value1 = rawget(value, 1)
+	local value2 = rawget(value, 2)
+	local value3 = rawget(value, 3)
 
-	if rawget(value, 2) < rawget(min, 2) then y = rawget(min, 2)
-	elseif rawget(value, 2) > rawget(max, 2) then y = rawget(max, 2)
-	else y = rawget(value, 2) end
+	local min1 = rawget(min, 1)
+	local min2 = rawget(min, 2)
+	local min3 = rawget(min, 3)
 
-	if rawget(value, 3) < rawget(min, 3) then z = rawget(min, 3)
-	elseif rawget(value, 3) > rawget(max, 3) then z = rawget(max, 3)
-	else z = rawget(value, 3) end
+	local max1 = rawget(max, 1)
+	local max2 = rawget(max, 2)
+	local max3 = rawget(max, 3)
+
+	if value1 < min1 then x = min1
+	elseif value1 > max1 then x = max1
+	else x = value1 end
+
+	if value2 < min2 then y = min2
+	elseif value2 > max2 then y = max2
+	else y = value2 end
+
+	if value3 < min3 then z = min3
+	elseif value3 > max3 then z = max3
+	else z = value3 end
 
 	return {x, y, z}
 end
@@ -542,13 +635,25 @@ __e2setcost(5)
 
 --- Returns 1 if the vector lies between (or is equal to) the min/max vectors
 e2function number inrange(vector vec, vector min, vector max)
-	if vec[1] < rawget(min, 1) then return 0 end
-	if vec[2] < rawget(min, 2) then return 0 end
-	if vec[3] < rawget(min, 3) then return 0 end
+    local vec1 = rawget(vec, 1)
+    local vec2 = rawget(vec, 2)
+    local vec3 = rawget(vec, 3)
 
-	if vec[1] > rawget(max, 1) then return 0 end
-	if vec[2] > rawget(max, 2) then return 0 end
-	if vec[3] > rawget(max, 3) then return 0 end
+    local min1 = rawget(min, 1)
+    local min2 = rawget(min, 2)
+    local min3 = rawget(min, 3)
+
+    local max1 = rawget(max, 1)
+    local max2 = rawget(max, 2)
+    local max3 = rawget(max, 3)
+
+	if vec1 < min1 then return 0 end
+	if vec2 < min2 then return 0 end
+	if vec3 < min3 then return 0 end
+
+	if vec1 > max1 then return 0 end
+	if vec2 > max2 then return 0 end
+	if vec3 > max3 then return 0 end
 
 	return 1
 end
