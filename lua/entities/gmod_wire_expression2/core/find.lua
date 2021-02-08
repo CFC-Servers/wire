@@ -73,7 +73,7 @@ local forbidden_classes = {
 local function filter_default(self)
 	local chip = self.entity
 	return function(ent)
-	    if not ent then debut.Trace() end
+	    if not ent then debug.Trace() end
 		if forbidden_classes[ent:GetClass()] then return false end
 
 		if ent == chip then return false end
