@@ -259,11 +259,11 @@ registerOperator("ass", "t", "t", function(self, args)
 	local      rhs = rawget(op2, 1)(self, op2)
 
 	local Scope = self.Scopes[scope]
-	if !Scope.lookup then Scope.lookup = {} end
+	if not Scope.lookup then Scope.lookup = {} end
 
 	local lookup = Scope.lookup
 	if (rawget(lookup, rhs)) then lookup[rhs][lhs] = nil end
-	if (!rawget(lookup, rhs)) then rawget(lookup, rhs) = {} end
+	if (not rawget(lookup, rhs)) then rawset(lookup, rhs, {}) end
 	lookup[rhs][lhs] = true
 
 	rawset(Scope, lhs, rhs)
