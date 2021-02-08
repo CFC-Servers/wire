@@ -373,13 +373,9 @@ end
 -- ------------------------ list filtering -------------------------------------------------
 
 function E2Lib.filterList(list, criterion)
-	local index = 1
-	-- print("-- filterList: "..#list.." entries --")
-
 	local listSize = #list
-	local filteredList = {}
 
-	for i = 1, listSize do
+	for i = listSize, 1, -1 do
 	    local item = rawget(list, i)
 
 	    if not criterion(item) then
