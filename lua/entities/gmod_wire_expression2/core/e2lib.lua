@@ -690,7 +690,7 @@ do
 				if str then printMessage( ply, 2, str ) end
 
 				for i = 1, #prettyList do
-				    PrintMessage( ply, 2, rawget( prettyList, i ) )
+				    printMessage( ply, 2, rawget( prettyList, i ) )
 				end
 			else
 				if str then print( str ) end
