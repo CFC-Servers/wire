@@ -381,12 +381,10 @@ function E2Lib.filterList(list, criterion)
 	for i = 1, listSize do
 	    local item = rawget(list, i)
 
-	    if criterion(item) then
-	        tableInsert( filteredList, item )
+	    if not criterion(item) then
+	        tableRemove( list, i )
         end
     end
-
-	list = filteredList
 
 	return list
 end
@@ -472,8 +470,8 @@ for token, op in pairs(E2Lib.optable_inv) do
 	end
 end
 
+local op_order = { ["+"] = 1, ["-"] = 2, ["*"] = 3, ["/"] = 4, ["%"] = 5, ["^"] = 6, ["="] = 7, ["!"] = 8, [">"] = 9, ["<"] = 10, ["&"] = 11, ["|"] = 12, ["?"] = 13, [":"] = 14, [","] = 15, ["("] = 16, [")"] = 17, ["{"] = 18, ["}"] = 19, ["["] = 20, ["]"] = 21, ["$"] = 22, ["~"] = 23 }
 function E2Lib.printops()
-	local op_order = { ["+"] = 1, ["-"] = 2, ["*"] = 3, ["/"] = 4, ["%"] = 5, ["^"] = 6, ["="] = 7, ["!"] = 8, [">"] = 9, ["<"] = 10, ["&"] = 11, ["|"] = 12, ["?"] = 13, [":"] = 14, [","] = 15, ["("] = 16, [")"] = 17, ["{"] = 18, ["}"] = 19, ["["] = 20, ["]"] = 21, ["$"] = 22, ["~"] = 23 }
 	print("E2Lib.optable = {")
 
 	local optable = rawget(E2Lib, "optable")
@@ -862,7 +860,7 @@ hook.Add("InitPostEntity", "e2lib", function()
 				if owner == nil then return false end
 				if owner == player then return true end
 
-				local friends = rawget(owner, "CPPIGetFriends")(owner)
+				local friends = owner:CPPIGetFriends()
 				if not istable(friends) then return end
 
 				local friendCount = #friends
@@ -886,7 +884,7 @@ hook.Add("InitPostEntity", "e2lib", function()
 				    return selfPlayer
 				end
 
-				local owner = rawget(entity, "CPPIGetOwner")(entity)
+				local owner = entity:CPPIGetOwner()
 				if IsValid(owner) then return owner end
 
 				return _getOwner(self, entity)
