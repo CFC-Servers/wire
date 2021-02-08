@@ -889,4 +889,4 @@ hook.Add("InitPostEntity", "e2lib", function()
 			end)
 		end
 	end
-end
+end)
