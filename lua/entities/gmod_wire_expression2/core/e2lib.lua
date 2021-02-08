@@ -779,7 +779,7 @@ do
 	    local trimmed = args:Trim()
 	    local args = trimmed:lower()
 
-		local status, list, tbl, j = tobool( rawget(cmd, "find")(cmd, "enable" ) ), rawget(extensions, "list"), {}, 1
+		local status, list, tbl, j = tobool( cmd:find( "enable" ) ), rawget(extensions, "list"), {}, 1
 
 		local listCount = #list
 		for i = 1, listCount do
