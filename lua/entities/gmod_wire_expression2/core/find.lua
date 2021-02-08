@@ -406,9 +406,9 @@ e2function number findInSphere(vector center, radius)
 	if query_blocked(self, 1) then return 0 end
 
 	center = Vector(
-	    rawget(center, 1),
-	    rawget(center, 2),
-	    rawget(center, 3)
+	    center[1],
+	    center[2],
+	    center[3]
 	)
 
 	return applyFindList(self, rawget(ents, "FindInSphere")(center, radius))
@@ -419,15 +419,15 @@ e2function number findInCone(vector position, vector direction, length, degrees)
 	if query_blocked(self, 4) then return 0 end
 
 	position = Vector(
-	    rawget(position, 1),
-	    rawget(position, 2),
-	    rawget(position, 3)
+	    position[1],
+	    position[2],
+	    position[3]
 	)
 
 	direction = Vector(
-        rawget(direction, 1),
-        rawget(direction, 2),
-        rawget(direction, 3)
+        direction[1],
+        direction[2],
+        direction[3]
     ):GetNormalized()
 
 	local findlist = rawget(ents, "FindInSphere")(position, length)
@@ -456,15 +456,15 @@ end
 e2function number findInBox(vector min, vector max)
 	if query_blocked(self, 1) then return 0 end
 	min = Vector(
-	    rawget(min, 1),
-	    rawget(min, 2),
-	    rawget(min, 3)
+	    min[1],
+	    min[2],
+	    min[3]
 	)
 
 	max = Vector(
-	    rawget(max, 1),
-	    rawget(max, 2),
-	    rawget(max, 3)
+	    max[1],
+	    max[2],
+	    max[3]
 	)
 	return applyFindList(self, rawget(ents, "FindInBox")(min, max))
 end
@@ -490,7 +490,7 @@ end
 --[[************************************************************************]]--
 
 local function findPlayer(name)
-	name = string.lower(name)
+	name = stringLower(name)
 	return rawget(filterList(rawget(player, "GetAll")(), function(ent)
 	    return stringFind(stringLower(ent:GetName()), name,1,true)
 	end), 1)
