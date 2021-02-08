@@ -224,9 +224,9 @@ end
 
 function E2Lib.validPhysics(entity)
 	if IsValid(entity) then
-		if rawget(entity, "IsWorld")(entity) then return false end
-		if rawget(entity, "GetMoveType")(entity) ~= MOVETYPE_VPHYSICS then return false end
-		return rawget(entity, "GetPhysicsObject")(entity):IsValid()
+		if entity:IsWorld() then return false end
+		if entity:GetMoveType() ~= MOVETYPE_VPHYSICS then return false end
+		return entity:GetPhysicsObject():IsValid()
 	end
 
 	return false
@@ -243,13 +243,13 @@ function E2Lib.getOwner(self, entity)
 	    return selfPlayer
 	end
 
-	local entityGetPlayer = rawget(entity, "GetPlayer")
+	local entityGetPlayer = entity:GetPlayer()
 	if entityGetPlayer then
 		local ply = entityGetPlayer(entity)
 		if IsValid(ply) then return ply end
 	end
 
-	local OnDieFunctions = rawget(entity, "OnDieFunctions")
+	local OnDieFunctions = entity.OnDieFunctions
 
 	if OnDieFunctions then
 	    local getCountUpdate = rawget(OnDieFunctions, "GetCountUpdate")
@@ -274,7 +274,7 @@ function E2Lib.getOwner(self, entity)
 		end
 	end
 
-	local entityGetOwner = rawget(entity, "GetOwner")
+	local entityGetOwner = entity.GetOwner
 	if entityGetOwner then
 		local ply = entityGetOwner(entity)
 		if IsValid(ply) then return ply end
@@ -311,9 +311,9 @@ function E2Lib.canModifyPlayer(self, ply)
 	if ply == rawget(self, "player") then return true end
 
 	if not IsValid(ply) then return false end
-	if not rawget(ply, "IsPlayer")(ply) then return false end
+	if not ply:IsPlayer() then return false end
 
-	local vehicle = rawget(ply, "GetVehicle")(ply)
+	local vehicle = ply:GetVehicle()
 	if not IsValid(vehicle) then return false end
 	return isOwner(self, vehicle)
 end
@@ -478,7 +478,7 @@ function E2Lib.printops()
 
 	for k, v in pairs_sortkeys(optable, sortFunc) do
 		local tblstring = tableToString(v)
-		local gsub = rawget(tblstring, "gsub")
+		local gsub = tblstring.gsub
 
 		tblstring = gsub(tblstring, ",}", "}")
 		tblstring = gsub(tblstring, "{(.)=", " {[\"%1\"] = ")

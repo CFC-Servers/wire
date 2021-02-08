@@ -26,6 +26,8 @@ util.AddNetworkString("wire_holograms_set_player_color")
 
 local tableRemove = table.remove
 local tableInsert = table.insert
+local tableConcat = table.concat
+
 local netStart = net.Start
 local netWriteUInt = net.WriteUInt
 local netWriteFloat = net.WriteFloat
@@ -673,9 +675,9 @@ end
 local function CreateHolo(self, index, pos, scale, ang, color, model)
     local ent = rawget(Self, "entity")
 
-	if not pos   then pos   = rawget(ent, "GetPos")(ent) end
+	if not pos   then pos   = ent:GetPos() end
 	if not scale then scale = Vector(1,1,1) end
-	if not ang   then ang   = rawget(ent, "GetAngles")(ent) end
+	if not ang   then ang   = ent:GetAngles() end
 
 	model = GetModel(self, model or "cube") or "models/holograms/cube.mdl"
 
@@ -696,10 +698,10 @@ local function CreateHolo(self, index, pos, scale, ang, color, model)
 	else
 		prop = MakeHolo(rawget(self, "player"), pos, ang, model, {}, {})
 
-		rawget(prop, "Activate")(prop)
-		rawget(prop, "Spawn")(prop)
-		rawget(prop, "SetSolid")(prop, SOLID_NONE)
-		rawget(prop, "SetMoveType")(prop, MOVETYPE_NONE)
+		prop:Activate()
+		prop:Spawn()
+		prop:SetSolid(SOLID_NONE)
+		prop:SetMoveType(MOVETYPE_NONE)
 
 		do
             local uid = rawget(self, "uid")
@@ -749,9 +751,9 @@ local function CheckSpawnTimer( self, readonly )
 	local holo = rawget(holoData, "holo")
 
 	local rightNow = CurTime()
-	local burstDelay = rawget(wire_holograms_burst_delay, "GetInt")(wire_holograms_burst_delay)
-	local burstAmount = rawget(wire_holograms_burst_amount, "GetInt")(wire_holograms_burst_amount)
-	local spawnAmount = rawget(wire_holograms_spawn_amount, "GetInt")(wire_holograms_spawn_amount)
+	local burstDelay = wire_holograms_burst_delay:GetInt()
+	local burstAmount = wire_holograms_burst_amount:GetInt()
+	local spawnAmount = wire_holograms_spawn_amount:GetInt()
 
 	if rightNow >= rawget(holo, "nextSpawn") then
 		rawset(holo, "nextSpawn", rightNow + 1)
@@ -825,7 +827,7 @@ local function clearholos_all(plyUid)
 		    local holoEnt = rawget(holo, "ent")
 
 		    if IsValid(holoEnt) then
-                rawget(holoEnt, "RemoveCallOnRemove")( holoEnt, "holo_cleanup" )
+                holoEnt:RemoveCallOnRemove("holo_cleanup")
                 remove_holo(Holo)
             end
 		end
@@ -846,25 +848,25 @@ e2function entity holoCreate(index, vector position, vector scale, angle ang, ve
 
 	local uid = rawget(self, "uid")
 	local ply = rawget(self, "player")
-	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
 
 	local Holo = CheckIndex(self, index)
 
-	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	local overLimit = rawget(PlayerAmount, uid) >= wire_holograms_max:GetInt()
 	if not Holo and overLimit then return end
 
 	position = Vector(
-	    rawget(position, 1),
-	    rawget(position, 2),
-	    rawget(position, 3)
+	    position[1],
+	    position[2],
+	    position[3]
 	)
 
 	ang = Angle(
-	    rawget(ang, 1),
-	    rawget(ang, 2),
-	    rawget(ang, 3)
+	    ang[1],
+	    ang[2],
+	    ang[3]
 	)
 
 	local ret = CreateHolo(self, index, position, scale, ang, color, model)
@@ -875,25 +877,25 @@ e2function entity holoCreate(index, vector position, vector scale, angle ang, ve
 	if not checkOwner(self) then return end
 
 	local ply = rawget(self, "player")
-	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
 
 	local Holo = CheckIndex(self, index)
 
-	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	local overLimit = rawget(PlayerAmount, uid) >= wire_holograms_max:GetInt()
 	if not Holo and overLimit then return end
 
 	position = Vector(
-	    rawget(position, 1),
-	    rawget(position, 2),
-	    rawget(position, 3)
+	    position[1],
+	    position[2],
+	    position[3]
 	)
 
 	ang = Angle(
-	    rawget(ang, 1),
-	    rawget(ang, 2),
-	    rawget(ang, 3)
+	    ang[1],
+	    ang[2],
+	    ang[3]
 	)
 
 	local ret = CreateHolo(self, index, position, scale, ang, color, model)
@@ -904,25 +906,25 @@ e2function entity holoCreate(index, vector position, vector scale, angle ang, ve
 	if not checkOwner(self) then return end
 
 	local ply = rawget(self, "player")
-	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
 
 	local Holo = CheckIndex(self, index)
 
-	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	local overLimit = rawget(PlayerAmount, uid) >= wire_holograms_max:GetInt()
 	if not Holo and overLimit then return end
 
 	position = Vector(
-	    rawget(position, 1),
-	    rawget(position, 2),
-	    rawget(position, 3)
+	    position[1],
+	    position[2],
+	    position[3]
 	)
 
 	ang = Angle(
-	    rawget(ang, 1),
-	    rawget(ang, 2),
-	    rawget(ang, 3)
+	    ang[1],
+	    ang[2],
+	    ang[3]
 	)
 
 	local ret = CreateHolo(self, index, position, scale, ang, color)
@@ -933,25 +935,25 @@ e2function entity holoCreate(index, vector position, vector scale, angle ang, ve
 	if not checkOwner(self) then return end
 
 	local ply = rawget(self, "player")
-	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
 
 	local Holo = CheckIndex(self, index)
 
-	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	local overLimit = rawget(PlayerAmount, uid) >= wire_holograms_max:GetInt()
 	if not Holo and overLimit then return end
 
 	position = Vector(
-	    rawget(position, 1),
-	    rawget(position, 2),
-	    rawget(position, 3)
+	    position[1],
+	    position[2],
+	    position[3]
 	)
 
 	ang = Angle(
-	    rawget(ang, 1),
-	    rawget(ang, 2),
-	    rawget(ang, 3)
+	    ang[1],
+	    ang[2],
+	    ang[3]
 	)
 
 	local ret = CreateHolo(self, index, position, scale, ang, color)
@@ -963,25 +965,25 @@ e2function entity holoCreate(index, vector position, vector scale, angle ang)
 
 	local uid = rawget(self, "uid")
 	local ply = rawget(self, "player")
-	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
 
 	local Holo = CheckIndex(self, index)
 
-	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	local overLimit = rawget(PlayerAmount, uid) >= wire_holograms_max:GetInt()
 	if not Holo and overLimit then return end
 
 	position = Vector(
-	    rawget(position, 1),
-	    rawget(position, 2),
-	    rawget(position, 3)
+	    position[1],
+	    position[2],
+	    position[3]
 	)
 
 	ang = Angle(
-	    rawget(ang, 1),
-	    rawget(ang, 2),
-	    rawget(ang, 3)
+	    ang[1],
+	    ang[2],
+	    ang[3]
 	)
 	local ret = CreateHolo(self, index, position, scale, ang)
 	if IsValid(ret) then return ret end
@@ -992,19 +994,19 @@ e2function entity holoCreate(index, vector position, vector scale)
 
 	local uid = rawget(self, "uid")
 	local ply = rawget(self, "player")
-	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
 
 	local Holo = CheckIndex(self, index)
 
-	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	local overLimit = rawget(PlayerAmount, uid) >= wire_holograms_max:GetInt()
 	if not Holo and overLimit then return end
 
 	position = Vector(
-	    rawget(position, 1),
-	    rawget(position, 2),
-	    rawget(position, 3)
+	    position[1],
+	    position[2],
+	    position[3]
 	)
 
 	local ret = CreateHolo(self, index, position, scale)
@@ -1016,19 +1018,19 @@ e2function entity holoCreate(index, vector position)
 
 	local uid = rawget(self, "uid")
 	local ply = rawget(self, "player")
-	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
 
 	local Holo = CheckIndex(self, index)
 
-	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	local overLimit = rawget(PlayerAmount, uid) >= wire_holograms_max:GetInt()
 	if not Holo and overLimit then return end
 
 	position = Vector(
-	    rawget(position, 1),
-	    rawget(position, 2),
-	    rawget(position, 3)
+	    position[1],
+	    position[2],
+	    position[3]
 	)
 
 	local ret = CreateHolo(self, index, position)
@@ -1040,13 +1042,13 @@ e2function entity holoCreate(index)
 
 	local uid = rawget(self, "uid")
 	local ply = rawget(self, "player")
-	local isBlocked = rawget(BlockList, rawget(ply, "SteamID")(ply))
+	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
 
 	local Holo = CheckIndex(self, index)
 
-	local overLimit = rawget(PlayerAmount, uid) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	local overLimit = rawget(PlayerAmount, uid) >= wire_holograms_max:GetInt()
 	if not Holo and overLimit then return end
 
 	local ret = CreateHolo(self, index)
@@ -1105,7 +1107,7 @@ __e2setcost(2)
 e2function number holoCanCreate()
 	if (not checkOwner(self)) then return 0 end
 
-	if CheckSpawnTimer(self, true) == false or rawget(PlayerAmount, rawget(self, "uid")) >= rawget(wire_holograms_max, "GetInt")(wire_holograms_max) then
+	if CheckSpawnTimer(self, true) == false or rawget(PlayerAmount, rawget(self, "uid")) >= wire_holograms_max:GetInt() then
 		return 0
 	end
 
@@ -1125,7 +1127,7 @@ e2function number holoAmount()
 end
 
 e2function number holoMaxAmount()
-	return rawget(wire_holograms_max, "GetInt")(wire_holograms_max)
+	return wire_holograms_max:GetInt()
 end
 
 -- -----------------------------------------------------------------------------
@@ -1151,11 +1153,11 @@ e2function void holoScaleUnits(index, vector size)
 	if not Holo then return end
 
 	local holoEnt = rawget(Holo, "ent")
-	local propsize = rawget(holoEnt,"OBBMaxs")(holoEnt) - rawget(holoEnt, "OBBMins")(holoEnt)
+	local propsize = holoEnt:OBBMaxs() - holoEnt:OBBMins()
 
-	local x = rawget(size, 1) / rawget(propsize, "x")
-	local y = rawget(size, 2) / rawget(propsize, "y")
-	local z = rawget(size, 3) / rawget(propsize, "z")
+	local x = size[1] / rawget(propsize, "x")
+	local y = size[2] / rawget(propsize, "y")
+	local z = size[3] / rawget(propsize, "z")
 
 	rescale(Holo, Vector(x, y, z))
 end
@@ -1167,12 +1169,12 @@ e2function vector holoScaleUnits(index)
 	local scale = rawget(Holo, "scale") or {0,0,0} -- TODO: maybe {1,1,1}?
 
 	local holoEnt = rawget(Holo, "ent")
-	local propsize = rawget(holoEnt, "OBBMaxs")(holoEnt) - rawget(holoEnt, "OBBMins")(holoEnt)
+	local propsize = holoEnt:OBBMaxs() - holoEnt:OBBMins()
 
 	return Vector(
-        rawget(scale, 1) * rawget(propsize, "x"),
-        rawget(scale, 2) * rawget(propsize, "y"),
-        rawget(scale, 3) * rawget(propsize, "z")
+        scale[1] * rawget(propsize, "x"),
+        scale[2] * rawget(propsize, "y"),
+        scale[3] * rawget(propsize, "z")
     )
 end
 
@@ -1249,14 +1251,14 @@ e2function void holoClip(index, vector origin, vector normal, isglobal) -- Clip 
 	set_clip(
         Holo, 1,
         Vector(
-            rawget(origin, 1),
-            rawget(origin, 2),
-            rawget(origin, 3)
+            origin[1],
+            origin[2],
+            origin[3]
         ),
         Vector(
-            rawget(normal, 1),
-            rawget(normal, 2),
-            rawget(normal, 3)
+            normal[1],
+            normal[2],
+            normal[3]
         ),
         isglobal ~= 0 and 0 or rawget(Holo, "ent"):EntIndex()
     )
@@ -1269,14 +1271,14 @@ e2function void holoClip(index, clipidx, vector origin, vector normal, isglobal)
 	set_clip(
         Holo, clipidx,
         Vector(
-            rawget(origin, 1),
-            rawget(origin, 2),
-            rawget(origin, 3)
+            origin[1],
+            origin[2],
+            origin[3]
         ),
         Vector(
-            rawget(normal, 1),
-            rawget(normal, 2),
-            rawget(normal, 3)
+            normal[1],
+            normal[2],
+            normal[3]
         ),
         isglobal ~= 0 and 0 or rawget(Holo, "ent"):EntIndex()
     )
@@ -1289,14 +1291,14 @@ e2function void holoClip(index, vector origin, vector normal, entity localent) -
 	set_clip(
         Holo, 1,
         Vector(
-            rawget(origin, 1),
-            rawget(origin, 2),
-            rawget(origin, 3)
+            origin[1],
+            origin[2],
+            origin[3]
         ),
         Vector(
-            rawget(normal, 1),
-            rawget(normal, 2),
-            rawget(normal, 3)
+            normal[1],
+            normal[2],
+            normal[3]
         ),
         localent:EntIndex()
     )
@@ -1309,14 +1311,14 @@ e2function void holoClip(index, clipidx, vector origin, vector normal, entity lo
 	set_clip(
         Holo, clipidx,
         Vector(
-            rawget(origin, 1),
-            rawget(origin, 2),
-            rawget(origin, 3)
+            origin[1],
+            origin[2],
+            origin[3]
         ),
         Vector(
-            rawget(normal, 1),
-            rawget(normal, 2),
-            rawget(normal, 3)
+            normal[1],
+            normal[2],
+            normal[3]
         ),
         localent:EntIndex()
     )
@@ -1329,9 +1331,9 @@ e2function void holoPos(index, vector position)
 	rawget(WireLib, "setPos")(
 	    rawget(Holo, "ent"),
 	    Vector(
-	        rawget(position, 1),
-	        rawget(position, 2),
-	        rawget(position, 3)
+	        position[1],
+	        position[2],
+	        position[3]
 	    )
 	)
 end
@@ -1343,9 +1345,9 @@ e2function void holoAng(index, angle ang)
 	rawget(WireLib, "setAng")(
 	    rawget(Holo, "ent"),
 	    Angle(
-	        rawget(ang, 1),
-	        rawget(ang, 2),
-	        rawget(ang, 3)
+	        ang[1],
+	        ang[2],
+	        ang[3]
 	    )
 	)
 end
@@ -1361,9 +1363,9 @@ e2function void holoColor(index, vector color)
 	rawget(WireLib, "SetColor")(
 	    holoEnt,
 	    Color(
-	        rawget(color, 1),
-	        rawget(color, 2),
-	        rawget(color, 3),
+	        color[1],
+	        color[2],
+	        color[3],
 	        rawget(holoEnt:GetColor(), "a")
 	    )
 	)
@@ -1376,10 +1378,10 @@ e2function void holoColor(index, vector4 color)
 	rawget(WireLib, "SetColor")(
         rawget(Holo, "ent"),
         Color(
-            rawget(color, 1),
-            rawget(color, 2),
-            rawget(color, 3),
-            rawget(color, 4)
+            color[1],
+            color[2],
+            color[3],
+            color[4]
         )
     )
 end
@@ -1391,9 +1393,9 @@ e2function void holoColor(index, vector color, alpha)
 	rawget(WireLib, "SetColor")(
 	    rawget(Holo, "ent"),
 	    Color(
-	        rawget(color, 1),
-	        rawget(color, 2),
-	        rawget(color, 3),
+	        color[1],
+	        color[2],
+	        color[3],
 	        alpha
 	    )
 	)
@@ -1432,7 +1434,7 @@ e2function array holoModelList()
 	local mlist = {}
 
 	for k in pairs( ModelList ) do
-	    table.insert(mlist, k)
+	    tableInsert(mlist, k)
 	end
 
 	return mlist
@@ -1452,7 +1454,7 @@ e2function void holoModel(index, string model)
 	if not model then return end
 
 	local holoEnt = rawget(Holo, "ent)")
-	rawget(holoEnt, "SetModel")(holoEnt, model)
+	holoEnt:SetModel(model)
 end
 
 e2function void holoModel(index, string model, skin)
@@ -1465,8 +1467,8 @@ e2function void holoModel(index, string model, skin)
 	if not model then return end
 
 	local holoEnt = rawget(Holo, "ent")
-	rawget(holoEnt, "SetModel")(holoEnt, model)
-	rawget(holoEnt, "SetSkin")(holoEnt, skin)
+	holoEnt:SetModel(model)
+	holoEnt:SetSkin(skin)
 end
 
 e2function void holoSkin(index, skin)
@@ -1476,9 +1478,9 @@ e2function void holoSkin(index, skin)
 	local holoEnt = rawget(Holo, "ent")
 
 	skin = skin - skin % 1
-	local _, skin = GetModel(self, rawaget(holoEnt, "GetModel")(holoEnt), skin)
+	local _, skin = GetModel(self, holoEnt:GetModel(), skin)
 
-	rawget(holoEnt, "SetSkin")(holoEnt, skin)
+	holoEnt:SetSkin(skin)
 end
 
 e2function void holoMaterial(index, string material)
@@ -1492,9 +1494,9 @@ e2function void holoPlayerColor(index, vector color)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	local r = rawget(color, 1) / 255
-	local g = rawget(color, 2) / 255
-	local b = rawget(color, 3) / 255
+	local r = color[1] / 255
+	local g = color[2] / 255
+	local b = color[3] / 255
 
 	set_player_color(Holo, Vector(r, g, b))
 end
@@ -1541,19 +1543,19 @@ end
 local function Parent_Hologram(holo, ent, attachment)
     local holoEnt = rawget(holo, "ent")
 
-    local parent = rawget(ent, "GetParent")(ent)
-	if parent and rawget(parent, "IsValid")(parent) and parent == rawget(holo, "ent") then return end
+    local parent = ent:GetParent()
+	if parent and parent:IsValid() and parent == rawget(holo, "ent") then return end
 
-	rawget(holoEnt, "SetParent")(holoEnt, ent)
+	holoEnt:SetParent(ent)
 
 	if attachment ~= nil then
-		rawget(holoEnt, "Fire")(holoEnt, "SetParentAttachmentMaintainOffset", attachment, 0.01)
+		holoEnt:Fire("SetParentAttachmentMaintainOffset", attachment, 0.01)
 	end
 end
 
 -- Check for recursive parenting
 local function Check_Parents(child, parent)
-    local getParent = rawget(parent, "GetParent")
+    local getParent = parent.GetParent
 
 	while true do
 		parent = getParent( parent )
@@ -1606,8 +1608,8 @@ e2function void holoUnparent(index)
 	if not Holo then return end
 
 	local holoEnt = rawget(Holo, "ent")
-	rawget(holoEnt, "SetParent")(holoEnt, nil)
-	rawget(holoEnt, "SetParentPhysNum")(holoEnt, 0)
+	holoEnt:SetParent(nil)
+	holoEnt:SetParentPhysNum(0)
 end
 
 -- -----------------------------------------------------------------------------
@@ -1670,21 +1672,21 @@ end)
 -- -----------------------------------------------------------------------------
 
 local function ConsoleMessage(ply, text)
-	if rawget(ply, "IsValid")(ply) then
-		rawget(ply, "PrintMessage")( ply, HUD_PRINTCONSOLE, text )
+	if ply:IsValid() then
+		ply:PrintMessage( HUD_PRINTCONSOLE, text )
 	else
 		print(text)
 	end
 end
 
 concommand.Add( "wire_holograms_remove_all", function( ply, com, args )
-	if rawget(ply, "IsValid")(ply) and not rawget(ply, "IsAdmin")(ply) then return end
+	if ply:IsValid() and not ply:IsAdmin() then return end
 
 	clearholos_all()
 end )
 
 concommand.Add( "wire_holograms_block", function( ply, com, args )
-	if rawget(ply, "IsValid")(ply) and not rawget(ply, "IsAdmin")(ply) then return end
+	if ply:IsValid() and not ply:IsAdmin() then return end
 
 	local firstArg = rawget(args, 1)
 
@@ -1694,7 +1696,7 @@ concommand.Add( "wire_holograms_block", function( ply, com, args )
 		return
 	end
 
-	local name = rawget(firstArg, "lower")(firstArg)
+	local name = firstArg:lower()
 	local players = E2Lib.filterList(player.GetAll(), function(ent) return ent:GetName():lower():match(name) end)
 
 	if #players == 1 then
@@ -1750,7 +1752,7 @@ end )
 concommand.Add( "wire_holograms_block_id", function( ply, com, args )
 	if ply:IsValid() and not ply:IsAdmin() then return end
 
-	local steamID = table.concat(args)
+	local steamID = tableConcat(args)
 
 	if not steamID:match("STEAM_[0-9]:[0-9]:[0-9]+") then
 		ConsoleMessage( ply, "Invalid SteamID format" )
@@ -1781,7 +1783,7 @@ end )
 concommand.Add( "wire_holograms_unblock_id", function( ply, com, args )
 	if ply:IsValid() and not ply:IsAdmin() then return end
 
-	local steamID = table.concat(args)
+	local steamID = tableConcat(args)
 
 	if not steamID:match("STEAM_[0-9]:[0-9]:[0-9]+") then
 		ConsoleMessage( ply, "Invalid SteamID format" )
