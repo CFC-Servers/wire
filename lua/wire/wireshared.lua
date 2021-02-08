@@ -1101,9 +1101,9 @@ local maxx, maxy, maxz = 16384, 16384, 16384
 local clamp = math.Clamp
 function WireLib.clampPos(pos)
 	pos = Vector(pos)
-	rawset(pos, "x", clamp(rawget(pos, "x"), minx, maxx))
-	rawset(pos, "y", clamp(rawget(pos, "y"), miny, maxy))
-	rawset(pos, "z", clamp(rawget(pos, "z"), minz, maxz))
+	pos.x = clamp(pos.x, minx, maxx)
+	pos.y = clamp(pos.y, miny, maxy)
+	pos.z = clamp(pos.z, minz, maxz)
 	return pos
 end
 
@@ -1114,9 +1114,9 @@ end
 
 local huge, abs = math.huge, math.abs
 function WireLib.setAng(ent, ang)
-    local angPitch = rawget(ang, "pitch")
-    local angYaw = rawget(ang, "yaw")
-    local angRoll = rawget(ang, "roll")
+    local angPitch = ang.pitch
+    local angYaw = ang.yaw
+    local angRoll = ang.roll
 	if isnan(angPitch) or isnan(angYaw) or isnan(angRoll) then return end
 	if abs(angPitch) == huge or abs(angYaw) == huge or abs(angRoll) == huge then return false end -- SetAngles'ing inf crashes the server
 
@@ -1141,14 +1141,14 @@ end)
 
 -- Nan never equals itself, so if the value doesn't equal itself replace it with 0.
 function WireLib.clampForce( v )
-    local v1 = rawget(v, 1)
-    local v2 = rawget(v, 2)
-    local v3 = rawget(v, 3)
+    local v1 = v[1]
+    local v2 = v[2]
+    local v3 = v[3]
 
 	v = Vector(v1, v2, v3)
-	rawset(v, 1, v1 == v1 and mathClamp( v1, min_force, max_force ) or 0)
-	rawset(v, 2, v2 == v2 and mathClamp( v2, min_force, max_force ) or 0)
-	rawset(v, 3, v3 == v3 and mathClamp( v3, min_force, max_force ) or 0)
+	v[1] = v1 == v1 and mathClamp( v1, min_force, max_force ) or 0)
+	v[2] = v2 == v2 and mathClamp( v2, min_force, max_force ) or 0)
+	v[3] = v3 == v3 and mathClamp( v3, min_force, max_force ) or 0)
 
 	return v
 end
