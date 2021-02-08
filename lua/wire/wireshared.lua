@@ -1108,7 +1108,7 @@ function WireLib.clampPos(pos)
 end
 
 function WireLib.setPos(ent, pos)
-	if isnan(rawget(pos, "x")) or isnan(rawget(pos, "y")) or isnan(rawget(pos, "z")) then return end
+	if isnan(pos.x) or isnan(pos.y) or isnan(pos.z) then return end
 	return ent:SetPos(WireLib.clampPos(pos))
 end
 

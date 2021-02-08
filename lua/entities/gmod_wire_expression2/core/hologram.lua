@@ -824,7 +824,7 @@ local function clearholos_all(plyUid)
         local Holo = rawget(plyHolos, k)
 
 		if Holo then
-		    local holoEnt = rawget(holo, "ent")
+		    local holoEnt = rawget(Holo, "ent")
 
 		    if IsValid(holoEnt) then
                 holoEnt:RemoveCallOnRemove("holo_cleanup")
@@ -1408,7 +1408,7 @@ e2function void holoAlpha(index, alpha)
 	local holoEnt = rawget(Holo, "ent")
 
 	local c = holoEnt:GetColor()
-	rawset(c, a, alpha)
+	c.a = alpha
 
 	rawget(WireLib, "SetColor")(holoEnt, c)
 end
