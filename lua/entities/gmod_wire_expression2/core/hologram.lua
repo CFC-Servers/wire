@@ -4,7 +4,7 @@ E2Lib.RegisterExtension( "holo", true, "Allows E2 to create and manipulate non-s
 
 -- TODO: short-term checkOwner cache maybe?
 local function checkOwner(self)
-	return IsValid(rawget(self, player))
+	return IsValid(self.player)
 end
 
 -- -----------------------------------------------------------------------------
@@ -179,7 +179,7 @@ local function GetModel(self, model, skin)
 	    canModel = wirelibCanModel
 	end
 
-	local ply = rawget(self, "player")
+	local ply = self.player
 
 	if modelAny ~= 2 and not canModel(ply, model, skin) then
 		-- Check if the model is at least valid
@@ -637,10 +637,10 @@ local function CheckIndex(self, index)
 	local Holo
 
 	if index<0 then
-		local globalHolos = rawget(E2HoloRepo, rawget(self, "uid"))
+		local globalHolos = rawget(E2HoloRepo, self.uid)
 		Holo = rawget(globalHolos, -index)
 	else
-		local data = rawget(self, "data")
+		local data = self.data
 		local holos = rawget(data, "holos")
 		Holo = rawget(holos, index)
 	end
@@ -654,12 +654,12 @@ end
 local function SetIndex(self, index, Holo)
 	index = index - index % 1
 
-	local rep = rawget(E2HoloRepo, rawget(self, "uid"))
+	local rep = rawget(E2HoloRepo, self.uid)
 
 	if index < 0 then
 		rawset(rep, -index, Holo)
 	else
-		local data = rawget(self, "data")
+		local data = self.data
 		local holos = rawget(data, "holos")
 
 		if rawget(holos, index) then
@@ -673,7 +673,7 @@ local function SetIndex(self, index, Holo)
 end
 
 local function CreateHolo(self, index, pos, scale, ang, color, model)
-    local ent = rawget(Self, "entity")
+    local ent = self.entity
 
 	if not pos   then pos   = ent:GetPos() end
 	if not scale then scale = Vector(1,1,1) end
@@ -696,7 +696,7 @@ local function CreateHolo(self, index, pos, scale, ang, color, model)
 		rawget(WireLib, "setAng")(prop, ang)
 		prop:SetModel( model )
 	else
-		prop = MakeHolo(rawget(self, "player"), pos, ang, model, {}, {})
+		prop = MakeHolo(self.player, pos, ang, model, {}, {})
 
 		prop:Activate()
 		prop:Spawn()
@@ -704,7 +704,7 @@ local function CreateHolo(self, index, pos, scale, ang, color, model)
 		prop:SetMoveType(MOVETYPE_NONE)
 
 		do
-            local uid = rawget(self, "uid")
+            local uid = self.uid
             local new = rawget(PlayerAmount, uid) + 1
             rawset(PlayerAmount, uid, new)
         end
@@ -716,7 +716,7 @@ local function CreateHolo(self, index, pos, scale, ang, color, model)
 			local Holo = CheckIndex( self, index )
 			if not Holo then return end
 
-            local uid = rawget(self, "uid")
+            local uid = self.uid
             local new = rawget(PlayerAmount, uid) - 1
             rawset(PlayerAmount, uid, new)
 
@@ -747,7 +747,7 @@ end
 -- -----------------------------------------------------------------------------
 
 local function CheckSpawnTimer( self, readonly )
-	local holoData = rawget(self, "data")
+	local holoData = self.data
 	local holo = rawget(holoData, "holo")
 
 	local rightNow = CurTime()
@@ -785,14 +785,14 @@ end
 -- Removes all holograms from the given chip.
 local function clearholos(self)
 	-- delete local holos
-	local selfData = rawget(self, "data")
+	local selfData = self.data
 	local holos = rawget(selfData, "holos")
 
 	-- FIXME: Can this use ipairs?
 	for index,Holo in ipairs(holos) do remove_holo(Holo) end
 
 	-- delete global holos owned by this chip
-	local uid = rawget(self, "uid")
+	local uid = self.uid
 	local rep = rawget(E2HoloRepo, uid)
 
 	if not rep then return end
@@ -810,13 +810,13 @@ end
 local function clearholos_all(plyUid)
 	if plyUid == nil then
 		for plyUid in pairs(E2HoloRepo) do
-		    clearholos_all(pl_uid)
+		    clearholos_all(plyUid)
 		end
 
 		return
 	end
 
-	-- FIXME: Is this table like 1,2,3,4,5?
+	-- FIXME: Is this table numerically indexed?
 	local plyHolos = rawget(E2HoloRepo, plyUid)
 	local plyHolosCount = #plyHolos
 
@@ -846,8 +846,8 @@ __e2setcost(30) -- temporary
 e2function entity holoCreate(index, vector position, vector scale, angle ang, vector color, string model)
 	if not checkOwner(self) then return end
 
-	local uid = rawget(self, "uid")
-	local ply = rawget(self, "player")
+	local uid = self.uid
+	local ply = self.player
 	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
@@ -876,7 +876,7 @@ end
 e2function entity holoCreate(index, vector position, vector scale, angle ang, vector4 color, string model)
 	if not checkOwner(self) then return end
 
-	local ply = rawget(self, "player")
+	local ply = self.player
 	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
@@ -905,7 +905,7 @@ end
 e2function entity holoCreate(index, vector position, vector scale, angle ang, vector color)
 	if not checkOwner(self) then return end
 
-	local ply = rawget(self, "player")
+	local ply = self.player
 	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
@@ -934,7 +934,7 @@ end
 e2function entity holoCreate(index, vector position, vector scale, angle ang, vector4 color)
 	if not checkOwner(self) then return end
 
-	local ply = rawget(self, "player")
+	local ply = self.player
 	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
@@ -963,8 +963,8 @@ end
 e2function entity holoCreate(index, vector position, vector scale, angle ang)
 	if not checkOwner(self) then return end
 
-	local uid = rawget(self, "uid")
-	local ply = rawget(self, "player")
+	local uid = self.uid
+	local ply = self.player
 	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
@@ -992,8 +992,8 @@ end
 e2function entity holoCreate(index, vector position, vector scale)
 	if not checkOwner(self) then return end
 
-	local uid = rawget(self, "uid")
-	local ply = rawget(self, "player")
+	local uid = self.uid
+	local ply = self.player
 	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
@@ -1016,8 +1016,8 @@ end
 e2function entity holoCreate(index, vector position)
 	if not checkOwner(self) then return end
 
-	local uid = rawget(self, "uid")
-	local ply = rawget(self, "player")
+	local uid = self.uid
+	local ply = self.player
 	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
@@ -1040,8 +1040,8 @@ end
 e2function entity holoCreate(index)
 	if not checkOwner(self) then return end
 
-	local uid = rawget(self, "uid")
-	local ply = rawget(self, "player")
+	local uid = self.uid
+	local ply = self.player
 	local isBlocked = rawget(BlockList, ply:SteamID())
 
 	if isBlocked == true or CheckSpawnTimer( self ) == false then return end
@@ -1069,7 +1069,7 @@ end
 
 e2function void holoDeleteAll( all )
 	if all > 0 then
-		clearholos_all( rawget(self, "uid") )
+		clearholos_all( self.uid )
 	else
 		clearholos( self )
 	end
@@ -1088,9 +1088,9 @@ e2function void holoReset(index, string model, vector scale, vector color, strin
 
 	local setColor = rawget(WireLib, "SetColor")
 	local col = Color(
-	    rawget(color, 1),
-	    rawget(color, 2),
-	    rawget(color, 3),
+	    color[1],
+	    color[2],
+	    color[3],
 	    255
 	)
 
@@ -1107,7 +1107,7 @@ __e2setcost(2)
 e2function number holoCanCreate()
 	if (not checkOwner(self)) then return 0 end
 
-	if CheckSpawnTimer(self, true) == false or rawget(PlayerAmount, rawget(self, "uid")) >= wire_holograms_max:GetInt() then
+	if CheckSpawnTimer(self, true) == false or rawget(PlayerAmount, self.uid) >= wire_holograms_max:GetInt() then
 		return 0
 	end
 
@@ -1116,14 +1116,14 @@ end
 
 e2function number holoRemainingSpawns()
 	CheckSpawnTimer(self, true)
-	local selfData = rawget(self, "data")
+	local selfData = self.data
 	local dataHolo = rawget(selfData, "holo")
 	
 	return rawget(dataHolo, "remainingSpawns")
 end
 
 e2function number holoAmount()
-	return rawget(PlayerAmount, rawget(self, "uid"))
+	return rawget(PlayerAmount, self.uid)
 end
 
 e2function number holoMaxAmount()
@@ -1617,8 +1617,10 @@ end
 __e2setcost(2)
 e2function entity holoEntity(index)
 	local Holo = CheckIndex(self, index)
+	if not Holo then return end
+
 	local holoEnt = rawget(Holo, "ent")
-	if Holo and IsValid(holoEnt) then return holoEnt end
+	if IsValid(holoEnt) then return holoEnt end
 end
 
 __e2setcost(30)
@@ -1628,14 +1630,14 @@ e2function number holoIndex(entity ent)
 	if ent:GetClass() ~= "gmod_wire_hologram" then return 0 end
 
 	-- check local holos
-	local selfData = rawget(self, "data")
+	local selfData = self. data
 	local dataHolos = rawget(selfData, "holos")
 	for k, Holo in pairs(dataHolos) do
 		if(ent == rawget(Holo, "ent")) then return k end
 	end
 
 	-- check global holos
-	for k, Holo in pairs(rawget(E2HoloRepo, rawget(self, "uid"))) do
+	for k, Holo in pairs(rawget(E2HoloRepo, self.uid)) do
 		if isnumber(k) and ent == rawget(Holo, "ent") then return -k end
 	end
 
@@ -1645,7 +1647,7 @@ end
 -- -----------------------------------------------------------------------------
 
 registerCallback("construct", function(self)
-    local uid = rawget(self, "uid")
+    local uid = self.uid
     local holoRepo = rawget(E2HoloRepo, uid)
 
 	if not holoRepo then
@@ -1655,7 +1657,7 @@ registerCallback("construct", function(self)
 
 	local rightNow = CurTime()
 
-	local selfData = rawget(self, "data")
+	local selfData = self.data
 	rawset(selfData, "holos", {})
 	rawset(selfData, "holo", {
 		nextSpawn = rightNow + 1,
