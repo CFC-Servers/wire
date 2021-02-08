@@ -13,6 +13,7 @@ local IsValid = IsValid
 
 local tableInsert = table.insert
 local tableConcat = table.concat
+local tableRemove = table.remove
 local tableToString = table.ToString
 
 local stringMatch = string.match
