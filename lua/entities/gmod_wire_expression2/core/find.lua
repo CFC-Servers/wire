@@ -73,6 +73,7 @@ local forbidden_classes = {
 local function filter_default(self)
 	local chip = self.entity
 	return function(ent)
+	    if not ent then ErrorNoHalt() end
 		if forbidden_classes[ent:GetClass()] then return false end
 
 		if ent == chip then return false end
@@ -81,7 +82,7 @@ local function filter_default(self)
 end
 
 local function filter_default_without_class_blocklist(self)
-	local chip = rawget(self, "entity")
+	local chip = self.entity
 	return function(ent)
 		return ent ~= chip
 	end
