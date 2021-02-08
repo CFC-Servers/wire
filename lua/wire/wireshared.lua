@@ -429,10 +429,10 @@ if SERVER then
 
 	util.AddNetworkString(PERSISTENT_UUID_KEY)
 
-	hook.Add("PlayerInitialSpawn", PERSISTENT_UUID_KEY, function(player)
+	hook.Add("PlayerInitialSpawn", PERSISTENT_UUID_KEY, function(ply)
 		net.Start(PERSISTENT_UUID_KEY)
 		net.WriteString(WireLib.GetServerUUID())
-		net.Send(player)
+		net.Send(ply)
 	end)
 
 else
@@ -1298,37 +1298,37 @@ do
 		end)
 	elseif SERVER then
 		util.AddNetworkString(MESSAGE_NAME)
-		net.Receive(MESSAGE_NAME, function(_, player)
-			player.SyncedBindings = {}
+		net.Receive(MESSAGE_NAME, function(_, ply)
+			ply.SyncedBindings = {}
 			local count = net.ReadUInt(8)
 			for _ = 1, count do
 				local button = net.ReadUInt(16)
 				local bindingIndex = net.ReadUInt(5)
 				if button > BUTTON_CODE_NONE and button <= BUTTON_CODE_LAST then
 					local binding = interestingBinds[bindingIndex]
-					rawset(rawget(player, "SyncedBindings"), button, binding)
+					rawset(rawget(ply, "SyncedBindings"), button, binding)
 				end
 			end
 		end)
 
-		hook.Add("PlayerButtonDown", MESSAGE_NAME, function(player, button)
-		    local syncedBindings = rawget(player, "SyncedBindings")
+		hook.Add("PlayerButtonDown", MESSAGE_NAME, function(ply, button)
+		    local syncedBindings = rawget(ply, "SyncedBindings")
 
 			if not syncedBindings then return end
 			local binding = rawget(sycnedBindings, button)
-			hook.Run("PlayerBindDown", player, binding, button)
+			hook.Run("PlayerBindDown", ply, binding, button)
 		end)
 
-		hook.Add("PlayerButtonUp", MESSAGE_NAME, function(player, button)
-		    local syncedBindings = rawget(player, "SyncedBindings")
+		hook.Add("PlayerButtonUp", MESSAGE_NAME, function(ply, button)
+		    local syncedBindings = rawget(ply, "SyncedBindings")
 			if not syncedBindings then return end
 			local binding = rawget(sycnedBindings, button)
 
-			hook.Run("PlayerBindUp", player, binding, button)
+			hook.Run("PlayerBindUp", ply, binding, button)
 		end)
 
-		hook.Add("StartCommand", MESSAGE_NAME, function(player, command)
-		    local syncedBindings = rawget(player, "SyncedBindings")
+		hook.Add("StartCommand", MESSAGE_NAME, function(ply, command)
+		    local syncedBindings = rawget(ply, "SyncedBindings")
 			if not syncedBindings then return end
 
 			local wheel = command:GetMouseWheel()
@@ -1338,8 +1338,8 @@ do
 			local binding = rawget(syncedBindings, button)
 			if not binding then return end
 
-			hook.Run("PlayerBindDown", player, binding, button)
-			hook.Run("PlayerBindUp", player, binding, button)
+			hook.Run("PlayerBindDown", ply, binding, button)
+			hook.Run("PlayerBindUp", ply, binding, button)
 		end)
 	end
 end
