@@ -742,58 +742,58 @@ __e2setcost(15)
 
 --- Converts a local position/angle to a world position/angle and returns the position
 e2function vector toWorld( vector localpos, angle localang, vector worldpos, angle worldang )
-	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3)
-	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3)
-	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3)
-	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3)
+	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3))
+	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3))
+	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3))
+	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3))
 	return LocalToWorld(localpos,localang,worldpos,worldang)
 end
 
 --- Converts a local position/angle to a world position/angle and returns the angle
 e2function angle toWorldAng( vector localpos, angle localang, vector worldpos, angle worldang )
-	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3)
-	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3)
-	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3)
-	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3)
+	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3))
+	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3))
+	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3))
+	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3))
 	local pos, ang = LocalToWorld(localpos,localang,worldpos,worldang)
 	return {rawget(ang, "p"),rawget(ang, "y"),rawget(ang, "r")}
 end
 
 --- Converts a local position/angle to a world position/angle and returns both in an array
 e2function array toWorldPosAng( vector localpos, angle localang, vector worldpos, angle worldang )
-	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3)
-	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3)
-	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3)
-	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3)
+	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3))
+	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3))
+	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3))
+	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3))
 	local pos, ang = LocalToWorld(localpos,localang,worldpos,worldang)
 	return {pos, {rawget(ang, "p"),rawget(ang, "y"),rawget(ang, "r")}}
 end
 
 --- Converts a world position/angle to a local position/angle and returns the position
 e2function vector toLocal( vector localpos, angle localang, vector worldpos, angle worldang )
-	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3)
-	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3)
-	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3)
-	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3)
+	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3))
+	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3))
+	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3))
+	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3))
 	return WorldToLocal(localpos,localang,worldpos,worldang)
 end
 
 --- Converts a world position/angle to a local position/angle and returns the angle
 e2function angle toLocalAng( vector localpos, angle localang, vector worldpos, angle worldang )
-	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3)
-	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3)
-	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3)
-	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3)
+	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3))
+	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3))
+	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3))
+	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3))
 	local vec, ang = WorldToLocal(localpos,localang,worldpos,worldang)
 	return {rawget(ang, "p"),rawget(ang, "y"),rawget(ang, "r")}
 end
 
 --- Converts a world position/angle to a local position/angle and returns both in an array
 e2function array toLocalPosAng( vector localpos, angle localang, vector worldpos, angle worldang )
-	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3)
-	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3)
-	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3)
-	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3)
+	local localpos = Vector(rawget(localpos, 1),rawget(localpos, 2),rawget(localpos, 3))
+	local localang = Angle(rawget(localang, 1),rawget(localang, 2),rawget(localang, 3))
+	local worldpos = Vector(rawget(worldpos, 1),rawget(worldpos, 2),rawget(worldpos, 3))
+	local worldang = Angle(rawget(worldang, 1),rawget(worldang, 2),rawget(worldang, 3))
 	local pos, ang = WorldToLocal(localpos,localang,worldpos,worldang)
 	return {pos, {rawget(ang, "p"),rawget(ang, "y"),rawget(ang, "r")}}
 end
@@ -802,19 +802,19 @@ end
 -- Credits to Wizard of Ass for bearing(v,a,v) and elevation(v,a,v)
 
 e2function number bearing(vector originpos,angle originangle, vector pos)
-	pos = WorldToLocal(Vector(rawget(pos, 1),rawget(pos, 2),rawget(pos, 3),Angle(0,0,0),Vector(rawget(originpos, 1),rawget(originpos, 2),rawget(originpos, 3),Angle(rawget(originangle, 1),rawget(originangle, 2),rawget(originangle, 3))
+	pos = WorldToLocal(Vector(rawget(pos, 1),rawget(pos, 2),rawget(pos, 3),Angle(0,0,0),Vector(rawget(originpos, 1),rawget(originpos, 2),rawget(originpos, 3),Angle(rawget(originangle, 1),rawget(originangle, 2),rawget(originangle, 3)))))
 	return rad2deg*-atan2(rawget(pos, "y"), rawget(pos, "x")
 end
 
 e2function number elevation(vector originpos,angle originangle, vector pos)
-	pos = WorldToLocal(Vector(rawget(pos, 1),rawget(pos, 2),rawget(pos, 3),Angle(0,0,0),Vector(rawget(originpos, 1),rawget(originpos, 2),rawget(originpos, 3),Angle(rawget(originangle, 1),rawget(originangle, 2),rawget(originangle, 3))
+	pos = WorldToLocal(Vector(rawget(pos, 1),rawget(pos, 2),rawget(pos, 3),Angle(0,0,0),Vector(rawget(originpos, 1),rawget(originpos, 2),rawget(originpos, 3),Angle(rawget(originangle, 1),rawget(originangle, 2),rawget(originangle, 3)))))
 	local len = pos:Length()
 	if (len < delta) then return 0 end
 	return rad2deg*asin(rawget(pos, "z") / len)
 end
 
 e2function angle heading(vector originpos,angle originangle, vector pos)
-	pos = WorldToLocal(Vector(rawget(pos, 1),rawget(pos, 2),rawget(pos, 3),Angle(0,0,0),Vector(rawget(originpos, 1),rawget(originpos, 2),rawget(originpos, 3),Angle(rawget(originangle, 1),rawget(originangle, 2),rawget(originangle, 3))
+	pos = WorldToLocal(Vector(rawget(pos, 1),rawget(pos, 2),rawget(pos, 3),Angle(0,0,0),Vector(rawget(originpos, 1),rawget(originpos, 2),rawget(originpos, 3),Angle(rawget(originangle, 1),rawget(originangle, 2),rawget(originangle, 3)))))
 
 	local bearing = rad2deg*-atan2(rawget(pos, "y"), rawget(pos, "x"))
 
@@ -829,7 +829,7 @@ __e2setcost( 10 )
 
 
 e2function number vector:isInWorld()
-	if util.IsInWorld(Vector(rawget(this, 1), rawget(this, 2), rawget(this, 3)) then return 1 else return 0 end
+	if util.IsInWorld(Vector(rawget(this, 1), rawget(this, 2), rawget(this, 3))) then return 1 else return 0 end
 end
 
 __e2setcost( 5 )
