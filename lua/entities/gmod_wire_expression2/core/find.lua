@@ -73,7 +73,7 @@ local forbidden_classes = {
 local function filter_default(self)
 	local chip = self.entity
 	return function(ent)
-	    if not ent then ErrorNoHalt() end
+	    if not ent then debut.Trace() end
 		if forbidden_classes[ent:GetClass()] then return false end
 
 		if ent == chip then return false end
@@ -233,9 +233,9 @@ local function update_filters(self)
 	local bl_owner_filter = filter_function_result_not_in_lookup(find.bl_owner, function(ent) return getOwner(self,ent) end)
 
 	-- blacklist for models
-	local bl_model_filter = filter_binary_predicate_match_none(find.bl_model, function(ent) return string.lower(ent:GetModel() or "") end, replace_match)
+	local bl_model_filter = filter_binary_predicate_match_none(find.bl_model, function(ent) return stringLower(ent:GetModel() or "") end, replace_match)
 	-- blacklist for classes
-	local bl_class_filter = filter_binary_predicate_match_none(find.bl_class, function(ent) return string.lower(ent:GetClass()) end, replace_match)
+	local bl_class_filter = filter_binary_predicate_match_none(find.bl_class, function(ent) return stringLower(ent:GetClass()) end, replace_match)
 
 	-- combine all blacklist filters (done further down)
 	--local filter_blacklist = filter_and(bl_entity_filter, bl_owner_filter, bl_model_filter, bl_class_filter)
@@ -256,9 +256,9 @@ local function update_filters(self)
 		local wl_owner_filter = filter_function_result_in_lookup(find.wl_owner, function(ent) return getOwner(self,ent) end)
 
 		-- blacklist for models
-		local wl_model_filter = filter_binary_predicate_match_one(find.wl_model, function(ent) return string.lower(ent:GetModel() or "") end, replace_match)
+		local wl_model_filter = filter_binary_predicate_match_one(find.wl_model, function(ent) return stringLower(ent:GetModel() or "") end, replace_match)
 		-- blacklist for classes
-		local wl_class_filter = filter_binary_predicate_match_one(find.wl_class, function(ent) return string.lower(ent:GetClass()) end, replace_match)
+		local wl_class_filter = filter_binary_predicate_match_one(find.wl_class, function(ent) return stringLower(ent:GetClass()) end, replace_match)
 
 		-- combine all whitelist filters
 		filter_whitelist = filter_or(wl_entity_filter, wl_owner_filter, wl_model_filter, wl_class_filter)
@@ -271,16 +271,15 @@ local function update_filters(self)
 end
 
 local function applyFindList(self, findlist)
-	local findfilter = rawget(rawget(self, "data"), "findfilter")
+	local findfilter = self.data.findfilter
 
 	if not findfilter then
 		update_filters(self)
-		findfilter = rawget(rawget(self, "data"), "findfilter")
+        findfilter = self.data.findfilter
 	end
 
 	filterList(findlist, findfilter)
-
-	rawset(rawget(self, "data"), "findlist", findlist)
+	self.data.findlist = findlist
 
 	return #findlist
 end
