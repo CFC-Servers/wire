@@ -686,7 +686,7 @@ do
             local prettyListCount = #prettyList
 
 			if IsValid( ply ) then
-			    local printMessage = rawget( ply, "PrintMessage" )
+			    local printMessage = ply.PrintMessage
 				if str then printMessage( ply, 2, str ) end
 
 				for i = 1, #prettyList do
