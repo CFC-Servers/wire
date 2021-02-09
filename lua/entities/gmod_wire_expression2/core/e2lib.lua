@@ -53,7 +53,7 @@ E2Lib.setAng = WireLib.setAng
 
 function E2Lib.setMaterial(ent, material)
 	material = rawget(WireLib, "IsValidMaterial")(material)
-	ent:SetMaterial(ent, material)
+	ent:SetMaterial(material)
 
 	StoreEntityModifier(ent, "material", { MaterialOverride = material })
 end
@@ -61,7 +61,7 @@ end
 function E2Lib.setSubMaterial(ent, index, material)
 	index = mathClamp(index, 0, 255)
 	material = rawget(WireLib, "IsValidMaterial")(material)
-	ent:SetSubMaterial(ent, index, material)
+	ent:SetSubMaterial(index, material)
 	StoreEntityModifier(ent, "submaterial", { ["SubMaterialOverride_"..index] = material })
 end
 
