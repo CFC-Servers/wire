@@ -1143,9 +1143,9 @@ end
 
 e2function vector holoScale(index)
 	local Holo = CheckIndex(self, index)
-	if not Holo then return {0,0,0} end
+	if not Holo then return Vector(0,0,0) end
 
-	return Holo.scale or {0,0,0} -- TODO: maybe {1,1,1}?
+	return Holo.scale or Vector(0,0,0) -- TODO: maybe Vector(1,1,1)?
 end
 
 e2function void holoScaleUnits(index, vector size)
@@ -1164,9 +1164,9 @@ end
 
 e2function vector holoScaleUnits(index)
 	local Holo = CheckIndex(self, index)
-	if not Holo then return {0,0,0} end
+	if not Holo then return Vector(0,0,0) end
 
-	local scale = rawget(Holo, "scale") or {0,0,0} -- TODO: maybe {1,1,1}?
+	local scale = rawget(Holo, "scale") or Vector(0,0,0) -- TODO: maybe Vector(1,1,1)?
 
 	local holoEnt = rawget(Holo, "ent")
 	local propsize = holoEnt:OBBMaxs() - holoEnt:OBBMins()
@@ -1197,7 +1197,7 @@ e2function void holoBoneScale(index, string bone, vector scale)
 end
 
 e2function vector holoBoneScale(index, boneIndex)
-	local default = {0, 0, 0}
+	local default = Vector(0,0,0)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return default end
 
@@ -1206,9 +1206,9 @@ e2function vector holoBoneScale(index, boneIndex)
 end
 
 e2function vector holoBoneScale(index, string bone)
-	local default = {0, 0, 0}
+	local default = Vector(0,0,0)
 	local Holo = CheckIndex(self, index)
-	if not Holo then return {0,0,0} end
+	if not Holo then return Vector(0,0,0) end
 
 	local boneIndex = rawget(Holo, "ent"):LookupBone(bone)
 	if boneIndex == nil then return default end
