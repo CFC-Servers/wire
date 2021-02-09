@@ -1146,9 +1146,9 @@ function WireLib.clampForce( v )
     local v3 = v[3]
 
 	v = Vector(v1, v2, v3)
-	v[1] = v1 == v1 and mathClamp( v1, min_force, max_force ) or 0)
-	v[2] = v2 == v2 and mathClamp( v2, min_force, max_force ) or 0)
-	v[3] = v3 == v3 and mathClamp( v3, min_force, max_force ) or 0)
+	v[1] = v1 == v1 and mathClamp( v1, min_force, max_force ) or 0
+	v[2] = v2 == v2 and mathClamp( v2, min_force, max_force ) or 0
+	v[3] = v3 == v3 and mathClamp( v3, min_force, max_force ) or 0
 
 	return v
 end
