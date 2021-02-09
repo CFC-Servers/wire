@@ -626,7 +626,7 @@ local function MakeHolo(Player, Pos, Ang, model)
 
 	prop:SetModel(model)
 	prop:SetPlayer(Player)
-	prop:SetNWInt(ownerid, Player:UserID())
+	prop:SetNWInt("ownerid", Player:UserID())
 
 	return prop
 end
