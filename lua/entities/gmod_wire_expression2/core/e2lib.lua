@@ -243,7 +243,7 @@ function E2Lib.getOwner(self, entity)
 	    return selfPlayer
 	end
 
-	local entityGetPlayer = entity:GetPlayer()
+	local entityGetPlayer = entity.GetPlayer
 	if entityGetPlayer then
 		local ply = entityGetPlayer(entity)
 		if IsValid(ply) then return ply end
