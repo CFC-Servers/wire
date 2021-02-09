@@ -266,9 +266,9 @@ local function flush_scale_queue(queue, recipient)
 
 			for _,Holo,scale in ipairs_map(plyqueue, unpack) do
 				netWriteUInt(rawget(Holo, "ent"):EntIndex(), 16)
-				netWriteFloat(rawget(scale, "x"))
-				netWriteFloat(rawget(scale, "y"))
-				netWriteFloat(rawget(scale, "z"))
+				netWriteFloat(scale.x)
+				netWriteFloat(scale.y)
+				netWriteFloat(scale.z)
 			end
 		end
 
@@ -291,9 +291,9 @@ local function flush_bone_scale_queue(queue, recipient)
 
                 netWriteUInt(rawget(Holo, "ent"):EntIndex(), 16)
                 netWriteUInt(bone + 1, 16) -- using +1 to be able reset holo bones scale with -1 and not use signed int
-                netWriteFloat(rawget(scale, "x"))
-                netWriteFloat(rawget(scale, "y"))
-                netWriteFloat(rawget(scale, "z"))
+                netWriteFloat(scale.x)
+                netWriteFloat(scale.y)
+                netWriteFloat(scale.z)
 
             end
         end
@@ -403,9 +403,9 @@ local function rescale(Holo, scale, bone)
 	local minval = -maxval
 
 	if scale then
-		local x = mathClamp( rawget(scale, 1), minval, maxval )
-		local y = mathClamp( rawget(scale, 2), minval, maxval )
-		local z = mathClamp( rawget(scale, 3), minval, maxval )
+		local x = mathClamp( scale[1], minval, maxval )
+		local y = mathClamp( scale[2], minval, maxval )
+		local z = mathClamp( scale[3], minval, maxval )
 		local scale = Vector(x, y, z)
 
 		if rawget(Holo, "scale") ~= scale then
@@ -727,10 +727,10 @@ local function CreateHolo(self, index, pos, scale, ang, color, model)
 	if not IsValid(prop) then return nil end
 
 	if color then
-        local r = rawget(color, 1)
-        local g = rawget(color, 2)
-        local b = rawget(color, 3)
-        local a = rawget(color, 4) or 255
+        local r = color[1]
+        local g = color[2]
+        local b = color[3]
+        local a = color[4] or 255
         local holoColor = Color(r, g, b, a)
         local setColor = rawget(WireLib, "SetColor")
 
@@ -739,7 +739,7 @@ local function CreateHolo(self, index, pos, scale, ang, color, model)
 
 	reset_clholo(Holo, scale) -- Reset scale, clips, and visible status
 
-	rawset(prop, "E2HoloData", Holo)
+	prop.E2HoloData = Holo
 
 	return prop
 end
@@ -1155,9 +1155,9 @@ e2function void holoScaleUnits(index, vector size)
 	local holoEnt = rawget(Holo, "ent")
 	local propsize = holoEnt:OBBMaxs() - holoEnt:OBBMins()
 
-	local x = size[1] / rawget(propsize, "x")
-	local y = size[2] / rawget(propsize, "y")
-	local z = size[3] / rawget(propsize, "z")
+	local x = size[1] / propsize.x
+	local y = size[2] / propsize.y
+	local z = size[3] / propsize.z
 
 	rescale(Holo, Vector(x, y, z))
 end
@@ -1172,31 +1172,31 @@ e2function vector holoScaleUnits(index)
 	local propsize = holoEnt:OBBMaxs() - holoEnt:OBBMins()
 
 	return Vector(
-        scale[1] * rawget(propsize, "x"),
-        scale[2] * rawget(propsize, "y"),
-        scale[3] * rawget(propsize, "z")
+        scale[1] * propsize.x,
+        scale[2] * propsize.y,
+        scale[3] * propsize.z
     )
 end
 
 
-e2function void holoBoneScale(index, boneindex, vector scale)
+e2function void holoBoneScale(index, boneIndex, vector scale)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	rescale(Holo, nil, {boneindex, scale})
+	rescale(Holo, nil, {boneIndex, scale})
 end
 
 e2function void holoBoneScale(index, string bone, vector scale)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return end
 
-	local boneindex = rawget(Holo, "ent"):LookupBone(bone)
-	if boneindex == nil then return end
+	local boneIndex = rawget(Holo, "ent"):LookupBone(bone)
+	if boneIndex == nil then return end
 
-	rescale(Holo, nil, {boneindex, scale})
+	rescale(Holo, nil, {boneIndex, scale})
 end
 
-e2function vector holoBoneScale(index, boneindex)
+e2function vector holoBoneScale(index, boneIndex)
 	local default = {0, 0, 0}
 	local Holo = CheckIndex(self, index)
 	if not Holo then return default end
@@ -1210,8 +1210,8 @@ e2function vector holoBoneScale(index, string bone)
 	local Holo = CheckIndex(self, index)
 	if not Holo then return {0,0,0} end
 
-	local boneindex = rawget(Holo, "ent"):LookupBone(bone)
-	if boneindex == nil then return default end
+	local boneIndex = rawget(Holo, "ent"):LookupBone(bone)
+	if boneIndex == nil then return default end
 
 	local boneScale = rawget(Holo, "bone_scale")
 	return rawget(boneScale, boneIndex) or default
@@ -1366,7 +1366,7 @@ e2function void holoColor(index, vector color)
 	        color[1],
 	        color[2],
 	        color[3],
-	        rawget(holoEnt:GetColor(), "a")
+	        holoEnt:GetColor().a
 	    )
 	)
 end
