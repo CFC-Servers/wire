@@ -6,11 +6,11 @@ function ENT:StoreOutput(name, info)
 	local rawData = string.Explode(",", info)
 
 	local Output = {}
-	Output.entities = rawData[1] or ""
-	Output.input = rawData[2] or ""
-	Output.param = rawData[3] or ""
-	Output.delay = tonumber(rawData[4]) or 0
-	Output.times = tonumber(rawData[5]) or -1
+	raweset(Output, "entities", rawget(rawData, 1) or "")
+	raweset(Output, "input", rawget(rawData, 2) or "")
+	raweset(Output, "param", rawget(rawData, 3) or "")
+	raweset(Output, "delay", tonumber(rawget(rawData, 4)) or 0)
+	raweset(Output, "times", tonumber(rawget(rawData, 5)) or -1)
 
 	self._OutputsToMap = self._OutputsToMap or {}
 	self._OutputsToMap[name] = self._OutputsToMap[name] or {}
