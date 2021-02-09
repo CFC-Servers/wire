@@ -1453,7 +1453,7 @@ e2function void holoModel(index, string model)
 	model = GetModel(self, model)
 	if not model then return end
 
-	local holoEnt = rawget(Holo, "ent)")
+	local holoEnt = rawget(Holo, "ent")
 	holoEnt:SetModel(model)
 end
 
