@@ -1124,6 +1124,10 @@ concommand.Add("wireversion", function(ply,cmd,args)
 	end
 end, nil, "Prints the server's Wiremod version")
 
+local stringSub = string.sub
+local stringStripExtension = string.StripExtension
+local stringGetNormalizedFilepath = string.GetNormalizedFilepath
+local stringLower = string.lower
 
 local material_blacklist = {
 	["engine/writez"] = true,
@@ -1131,8 +1135,8 @@ local material_blacklist = {
 	["effects/ar2_altfire1"] = true
 }
 function WireLib.IsValidMaterial(material)
-	material = string.sub(material, 1, 260)
-	local path = string.StripExtension(string.GetNormalizedFilepath(string.lower(material)))
+	material = stringSub(material, 1, 260)
+	local path = stringStripExtension(stringGetNormalizedFilepath(stringLower(material)))
 	if material_blacklist[path] then return "" end
 	return material
 end

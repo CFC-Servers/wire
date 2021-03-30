@@ -72,33 +72,59 @@ end
 --------------------------------------------------------------------------------
 
 registerOperator("ass", "v", "v", function(self, args)
-	local op1, op2, scope = args[2], args[3], args[4]
-	local      rv2 = op2[1](self, op2)
-	self.Scopes[scope][op1] = rv2
-	self.Scopes[scope].vclk[op1] = true
+	local op1, op2, scope = rawget(args, 2), rawget(args, 3), rawget(args, 4)
+
+	local      rv2 = rawget(op2, 1)(self, op2)
+	local scopes = rawget(self, "Scopes")
+	local scopesScope = rawget(scopes, scope)
+	rawset(scopesScope, op1, rv2)
+
+	local vclk = rawget(scopesScope, "vclk")
+	rawset(vclk, op1, true)
+
 	return rv2
 end)
 
 --------------------------------------------------------------------------------
 
 e2function number vector:operator_is()
-	if this[1] > delta or -this[1] > delta or
-	   this[2] > delta or -this[2] > delta or
-	   this[3] > delta or -this[3] > delta
+    local this1 = this[1]
+    local this2 = this[2]
+    local this3 = this[3]
+
+	if this1 > delta or -this1 > delta or
+	   this2 > delta or -this2 > delta or
+	   this3 > delta or -this3 > delta
 	   then return 1 else return 0 end
 end
 
 e2function number vector:operator==( vector other )
-	if this[1] - other[1] <= delta and other[1] - this[1] <= delta and
-	   this[2] - other[2] <= delta and other[2] - this[2] <= delta and
-	   this[3] - other[3] <= delta and other[3] - this[3] <= delta
+    local this1 = this[1]
+    local this2 = this[2]
+    local this3 = this[3]
+
+    local other1 = other[1]
+    local other2 = other[2]
+    local other3 = other[3]
+
+	if this1 - other1 <= delta and other1 - this1 <= delta and
+	   this2 - other2 <= delta and other2 - this2 <= delta and
+	   this3 - other3 <= delta and other3 - this3 <= delta
 	   then return 1 else return 0 end
 end
 
 e2function number vector:operator!=( vector other )
-	if this[1] - other[1] > delta or other[1] - this[1] > delta or
-	   this[2] - other[2] > delta or other[2] - this[2] > delta or
-	   this[3] - other[3] > delta or other[3] - this[3] > delta
+    local this1 = this[1]
+    local this2 = this[2]
+    local this3 = this[3]
+
+    local other1 = other[1]
+    local other2 = other[2]
+    local other3 = other[3]
+
+	if this1 - other1 > delta or other1 - this1 > delta or
+	   this2 - other2 > delta or other2 - this2 > delta or
+	   this3 - other3 > delta or other3 - this3 > delta
 	   then return 1 else return 0 end
 end
 
@@ -157,11 +183,11 @@ e2function vector operator/(vector lhs, vector rhs)
 end
 
 e2function number vector:operator[](index)
-	return this[floor(math.Clamp(index, 1, 3) + 0.5)]
+	return this[floor(rawget(math, "Clamp")(index, 1, 3) + 0.5)]
 end
 
 e2function number vector:operator[](index, value)
-	this[floor(math.Clamp(index, 1, 3) + 0.5)] = value
+	this[ floor(rawget(math, "Clamp")(index, 1, 3) + 0.5) ] = value
 	return value
 end
 
@@ -225,11 +251,17 @@ end
 __e2setcost(5)
 
 e2function number vector:length()
-	return (this[1] * this[1] + this[2] * this[2] + this[3] * this[3]) ^ 0.5
+    local this1 = this[1]
+    local this2 = this[2]
+    local this3 = this[3]
+    return ((this1 * this1) + (this2 * this2) + (this3 * this3)) ^ 0.5
 end
 
 e2function number vector:length2()
-	return this[1] * this[1] + this[2] * this[2] + this[3] * this[3]
+    local this1 = this[1]
+    local this2 = this[2]
+    local this3 = this[3]
+    return (this1 * this1) + (this2 * this2) + (this3 * this3)
 end
 
 e2function number vector:distance(vector other)
@@ -243,9 +275,13 @@ e2function number vector:distance2( vector other )
 end
 
 e2function vector vector:normalized()
-	local len = (this[1] * this[1] + this[2] * this[2] + this[3] * this[3]) ^ 0.5
+    local this1 = this[1]
+    local this2 = this[2]
+    local this3 = this[3]
+	local len = ((this1 * this1) + (this2 * this2) + (this3 * this3)) ^ 0.5
+
 	if len > delta then
-		return { this[1] / len, this[2] / len, this[3] / len }
+		return { this1 / len, this2 / len, this3 / len }
 	else
 		return { 0, 0, 0 }
 	end
@@ -256,10 +292,18 @@ e2function number vector:dot( vector other )
 end
 
 e2function vector vector:cross( vector other )
+    local this1 = this[1]
+    local this2 = this[2]
+    local this3 = this[3]
+
+    local other1 = other[1]
+    local other2 = other[2]
+    local other3 = other[3]
+
 	return {
-		this[2] * other[3] - this[3] * other[2],
-		this[3] * other[1] - this[1] * other[3],
-		this[1] * other[2] - this[2] * other[1],
+		this2 * other3 - this3 * other2,
+		this3 * other1 - this1 * other3,
+		this1 * other2 - this2 * other1
 	}
 end
 
@@ -267,23 +311,35 @@ __e2setcost(10)
 
 --- returns the outer product (tensor product) of two vectors
 e2function matrix vector:outerProduct( vector other )
+    local this1 = this[1]
+    local this2 = this[2]
+    local this3 = this[3]
+
+    local other1 = other[1]
+    local other2 = other[2]
+    local other3 = other[3]
+
 	return {
-		this[1] * this[1], this[1] * other[2], this[1] * other[3],
-		this[2] * this[1], this[2] * other[2], this[2] * other[3],
-		this[3] * this[1], this[3] * other[2], this[3] * other[3],
+		this1 * this1, this1 * other2, this1 * other3,
+		this2 * this1, this2 * other2, this2 * other3,
+		this3 * this1, this3 * other2, this3 * other3,
 	}
 end
 
 __e2setcost(15)
 e2function vector vector:rotateAroundAxis(vector axis, degrees)
-	local ca, sa = math.cos(degrees*deg2rad), math.sin(degrees*deg2rad)
+    local this1 = this[1]
+    local this2 = this[2]
+    local this3 = this[3]
+
+	local ca, sa = mathCos(degrees*deg2rad), mathSin(degrees*deg2rad)
 	local x,y,z = axis[1], axis[2], axis[3]
 	local length = (x*x+y*y+z*z)^0.5
 	x,y,z = x/length, y/length, z/length
 
-	return {(ca + (x^2)*(1-ca)) * this[1] + (x*y*(1-ca) - z*sa) * this[2] + (x*z*(1-ca) + y*sa) * this[3],
-			(y*x*(1-ca) + z*sa) * this[1] + (ca + (y^2)*(1-ca)) * this[2] + (y*z*(1-ca) - x*sa) * this[3],
-			(z*x*(1-ca) - y*sa) * this[1] + (z*y*(1-ca) + x*sa) * this[2] + (ca + (z^2)*(1-ca)) * this[3]}
+	return {(ca + (x^2)*(1-ca)) * this1 + (x*y*(1-ca) - z*sa) * this2 + (x*z*(1-ca) + y*sa) * this3,
+			(y*x*(1-ca) + z*sa) * this1 + (ca + (y^2)*(1-ca)) * this2 + (y*z*(1-ca) - x*sa) * this3,
+			(z*x*(1-ca) - y*sa) * this1 + (z*y*(1-ca) + x*sa) * this2 + (ca + (z^2)*(1-ca)) * this3}
 end
 
 __e2setcost(5)
@@ -301,16 +357,23 @@ e2function vector vector:rotate( normal pitch, normal yaw, normal roll )
 end
 
 e2function vector2 vector:dehomogenized()
+    local this1 = this[1]
+    local this2 = this[2]
+
 	local w = this[3]
-	if w == 0 then return { this[1], this[2] } end
-	return { this[1]/w, this[2]/w }
+	if w == 0 then return { this1, this2 } end
+	return { this1/w, this2/w }
 end
 
 e2function vector positive(vector rv1)
+    local rv1_1 = rv1[1]
+    local rv1_2 = rv1[2]
+    local rv1_3 = rv1[3]
+
 	return {
-		rv1[1] >= 0 and rv1[1] or -rv1[1],
-		rv1[2] >= 0 and rv1[2] or -rv1[2],
-		rv1[3] >= 0 and rv1[3] or -rv1[3],
+		rv1_1 >= 0 and rv1_1 or -rv1_1,
+		rv1_2 >= 0 and rv1_2 or -rv1_2,
+		rv1_3 >= 0 and rv1_3 or -rv1_3,
 	}
 end
 
@@ -438,49 +501,93 @@ __e2setcost(10)
 
 --- min/max based on vector length - returns shortest/longest vector
 e2function vector min(vector rv1, vector rv2)
-	local length1 = ( rv1[1] * rv1[1] + rv1[2] * rv1[2] + rv1[3] * rv1[3] ) ^ 0.5
-	local length2 = ( rv2[1] * rv2[1] + rv2[2] * rv2[2] + rv2[3] * rv2[3] ) ^ 0.5
+    local rv1_1 = rv1[1]
+    local rv1_2 = rv1[2]
+    local rv1_3 = rv1[3]
+
+    local rv2_1 = rv2[1]
+    local rv2_2 = rv2[2]
+    local rv2_3 = rv2[3]
+
+	local length1 = ( rv1_1 * rv1_1 + rv1_2 * rv1_2 + rv1_3 * rv1_3 ) ^ 0.5
+	local length2 = ( rv2_1 * rv2_1 + rv2_2 * rv2_2 + rv2_3 * rv2_3 ) ^ 0.5
 	if length1 < length2 then return rv1 else return rv2 end
 end
 
 e2function vector max(vector rv1, vector rv2)
-	local length1 = ( rv1[1] * rv1[1] + rv1[2] * rv1[2] + rv1[3] * rv1[3] ) ^ 0.5
-	local length2 = ( rv2[1] * rv2[1] + rv2[2] * rv2[2] + rv2[3] * rv2[3] ) ^ 0.5
+    local rv1_1 = rv1[1]
+    local rv1_2 = rv1[2]
+    local rv1_3 = rv1[3]
+
+    local rv2_1 = rv2[1]
+    local rv2_2 = rv2[2]
+    local rv2_3 = rv2[3]
+
+	local length1 = ( rv1_1 * rv1_1 + rv1_2 * rv1_2 + rv1_3 * rv1_3 ) ^ 0.5
+	local length2 = ( rv2_1 * rv2_1 + rv2_2 * rv2_2 + rv2_3 * rv2_3 ) ^ 0.5
 	if length1 > length2 then return rv1 else return rv2 end
 end
 
 --- component-wise min/max
 e2function vector maxVec(vector rv1, vector rv2)
+    local rv1_1 = rv1[1]
+    local rv1_2 = rv1[2]
+    local rv1_3 = rv1[3]
+
+    local rv2_1 = rv2[1]
+    local rv2_2 = rv2[2]
+    local rv2_3 = rv2[3]
+
 	return {
-		rv1[1] > rv2[1] and rv1[1] or rv2[1],
-		rv1[2] > rv2[2] and rv1[2] or rv2[2],
-		rv1[3] > rv2[3] and rv1[3] or rv2[3],
+		rv1_1 > rv2_1 and rv1_1 or rv2_1,
+		rv1_2 > rv2_2 and rv1_2 or rv2_2,
+		rv1_3 > rv2_3 and rv1_3 or rv2_3,
 	}
 end
 
 e2function vector minVec(vector rv1, vector rv2)
+    local rv1_1 = rv1[1]
+    local rv1_2 = rv1[2]
+    local rv1_3 = rv1[3]
+
+    local rv2_1 = rv2[1]
+    local rv2_2 = rv2[2]
+    local rv2_3 = rv2[3]
+
 	return {
-		rv1[1] < rv2[1] and rv1[1] or rv2[1],
-		rv1[2] < rv2[2] and rv1[2] or rv2[2],
-		rv1[3] < rv2[3] and rv1[3] or rv2[3],
+		rv1_1 < rv2_1 and rv1_1 or rv2_1,
+		rv1_2 < rv2_2 and rv1_2 or rv2_2,
+		rv1_3 < rv2_3 and rv1_3 or rv2_3,
 	}
 end
 
 --- Performs modulo on x,y,z separately
 e2function vector mod(vector rv1, rv2)
+    local rv1_1 = rv1[1]
+    local rv1_2 = rv1[2]
+    local rv1_3 = rv1[3]
+
 	return {
-		rv1[1] >= 0 and rv1[1] % rv2 or rv1[1] % -rv2,
-		rv1[2] >= 0 and rv1[2] % rv2 or rv1[2] % -rv2,
-		rv1[3] >= 0 and rv1[3] % rv2 or rv1[3] % -rv2,
+		rv1_1 >= 0 and rv1_1 % rv2 or rv1_1 % -rv2,
+		rv1_2 >= 0 and rv1_2 % rv2 or rv1_2 % -rv2,
+		rv1_3 >= 0 and rv1_3 % rv2 or rv1_3 % -rv2,
 	}
 end
 
 --- Modulo where divisors are defined as a vector
 e2function vector mod(vector rv1, vector rv2)
+    local rv1_1 = rv1[1]
+    local rv1_2 = rv1[2]
+    local rv1_3 = rv1[3]
+
+    local rv2_1 = rv2[1]
+    local rv2_2 = rv2[2]
+    local rv2_3 = rv2[3]
+
 	return {
-		rv1[1] >= 0 and rv1[1] % rv2[1] or rv1[1] % -rv2[1],
-		rv1[2] >= 0 and rv1[2] % rv2[2] or rv1[2] % -rv2[2],
-		rv1[3] >= 0 and rv1[3] % rv2[3] or rv1[3] % -rv2[3],
+		rv1_1 >= 0 and rv1_1 % rv2_1 or rv1_1 % -rv2_1,
+		rv1_2 >= 0 and rv1_2 % rv2_2 or rv1_2 % -rv2_2,
+		rv1_3 >= 0 and rv1_3 % rv2_3 or rv1_3 % -rv2_3,
 	}
 end
 
@@ -488,17 +595,29 @@ end
 e2function vector clamp(vector value, vector min, vector max)
 	local x,y,z
 
-	if value[1] < min[1] then x = min[1]
-	elseif value[1] > max[1] then x = max[1]
-	else x = value[1] end
+	local value1 = value[1]
+	local value2 = value[2]
+	local value3 = value[3]
 
-	if value[2] < min[2] then y = min[2]
-	elseif value[2] > max[2] then y = max[2]
-	else y = value[2] end
+	local min1 = min[1]
+	local min2 = min[2]
+	local min3 = min[3]
 
-	if value[3] < min[3] then z = min[3]
-	elseif value[3] > max[3] then z = max[3]
-	else z = value[3] end
+	local max1 = max[1]
+	local max2 = max[2]
+	local max3 = max[3]
+
+	if value1 < min1 then x = min1
+	elseif value1 > max1 then x = max1
+	else x = value1 end
+
+	if value2 < min2 then y = min2
+	elseif value2 > max2 then y = max2
+	else y = value2 end
+
+	if value3 < min3 then z = min3
+	elseif value3 > max3 then z = max3
+	else z = value3 end
 
 	return {x, y, z}
 end
@@ -536,13 +655,25 @@ __e2setcost(5)
 
 --- Returns 1 if the vector lies between (or is equal to) the min/max vectors
 e2function number inrange(vector vec, vector min, vector max)
-	if vec[1] < min[1] then return 0 end
-	if vec[2] < min[2] then return 0 end
-	if vec[3] < min[3] then return 0 end
+    local vec1 = vec[1]
+    local vec2 = vec[2]
+    local vec3 = vec[3]
 
-	if vec[1] > max[1] then return 0 end
-	if vec[2] > max[2] then return 0 end
-	if vec[3] > max[3] then return 0 end
+    local min1 = min[1]
+    local min2 = min[2]
+    local min3 = min[3]
+
+    local max1 = max[1]
+    local max2 = max[2]
+    local max3 = max[3]
+
+	if vec1 < min1 then return 0 end
+	if vec2 < min2 then return 0 end
+	if vec3 < min3 then return 0 end
+
+	if vec1 > max1 then return 0 end
+	if vec2 > max2 then return 0 end
+	if vec3 > max3 then return 0 end
 
 	return 1
 end
@@ -645,7 +776,7 @@ e2function angle toWorldAng( vector localpos, angle localang, vector worldpos, a
 	local worldpos = Vector(worldpos[1],worldpos[2],worldpos[3])
 	local worldang = Angle(worldang[1],worldang[2],worldang[3])
 	local pos, ang = LocalToWorld(localpos,localang,worldpos,worldang)
-	return {ang.p,ang.y,ang.r}
+	return {ang["p"],ang["y"],ang["r"]}
 end
 
 --- Converts a local position/angle to a world position/angle and returns both in an array
@@ -655,7 +786,7 @@ e2function array toWorldPosAng( vector localpos, angle localang, vector worldpos
 	local worldpos = Vector(worldpos[1],worldpos[2],worldpos[3])
 	local worldang = Angle(worldang[1],worldang[2],worldang[3])
 	local pos, ang = LocalToWorld(localpos,localang,worldpos,worldang)
-	return {pos, {ang.p,ang.y,ang.r}}
+	return {pos, {ang["p"],ang["y"],ang["r"]}}
 end
 
 --- Converts a world position/angle to a local position/angle and returns the position
@@ -674,7 +805,7 @@ e2function angle toLocalAng( vector localpos, angle localang, vector worldpos, a
 	local worldpos = Vector(worldpos[1],worldpos[2],worldpos[3])
 	local worldang = Angle(worldang[1],worldang[2],worldang[3])
 	local vec, ang = WorldToLocal(localpos,localang,worldpos,worldang)
-	return {ang.p,ang.y,ang.r}
+	return {ang["p"],ang["y"],ang["r"]}
 end
 
 --- Converts a world position/angle to a local position/angle and returns both in an array
@@ -684,32 +815,32 @@ e2function array toLocalPosAng( vector localpos, angle localang, vector worldpos
 	local worldpos = Vector(worldpos[1],worldpos[2],worldpos[3])
 	local worldang = Angle(worldang[1],worldang[2],worldang[3])
 	local pos, ang = WorldToLocal(localpos,localang,worldpos,worldang)
-	return {pos, {ang.p,ang.y,ang.r}}
+	return {pos, {ang["p"],ang["y"],ang["r"]}}
 end
 
 --------------------------------------------------------------------------------
 -- Credits to Wizard of Ass for bearing(v,a,v) and elevation(v,a,v)
 
 e2function number bearing(vector originpos,angle originangle, vector pos)
-	pos = WorldToLocal(Vector(pos[1],pos[2],pos[3]),Angle(0,0,0),Vector(originpos[1],originpos[2],originpos[3]),Angle(originangle[1],originangle[2],originangle[3]))
-	return rad2deg*-atan2(pos.y, pos.x)
+	pos = WorldToLocal(Vector(pos[1],pos[2],pos[3],Angle(0,0,0),Vector(originpos[1],originpos[2],originpos[3],Angle(originangle[1],originangle[2],originangle[3]))))
+	return rad2deg*-atan2(pos["y"], pos["x"])
 end
 
 e2function number elevation(vector originpos,angle originangle, vector pos)
-	pos = WorldToLocal(Vector(pos[1],pos[2],pos[3]),Angle(0,0,0),Vector(originpos[1],originpos[2],originpos[3]),Angle(originangle[1],originangle[2],originangle[3]))
+	pos = WorldToLocal(Vector(pos[1],pos[2],pos[3],Angle(0,0,0),Vector(originpos[1],originpos[2],originpos[3],Angle(originangle[1],originangle[2],originangle[3]))))
 	local len = pos:Length()
 	if (len < delta) then return 0 end
-	return rad2deg*asin(pos.z / len)
+	return rad2deg*asin(pos["z"] / len)
 end
 
 e2function angle heading(vector originpos,angle originangle, vector pos)
-	pos = WorldToLocal(Vector(pos[1],pos[2],pos[3]),Angle(0,0,0),Vector(originpos[1],originpos[2],originpos[3]),Angle(originangle[1],originangle[2],originangle[3]))
+	pos = WorldToLocal(Vector(pos[1],pos[2],pos[3],Angle(0,0,0),Vector(originpos[1],originpos[2],originpos[3],Angle(originangle[1],originangle[2],originangle[3]))))
 
-	local bearing = rad2deg*-atan2(pos.y, pos.x)
+	local bearing = rad2deg*-atan2(pos["y"], pos["x"])
 
 	local len = pos:Length()
 	if (len < delta) then return { 0, bearing, 0 } end
-	return { rad2deg*asin(pos.z / len), bearing, 0 }
+	return { rad2deg*asin(pos["z"] / len), bearing, 0 }
 end
 
 --------------------------------------------------------------------------------

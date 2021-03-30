@@ -56,7 +56,7 @@ e2function array array(...)
 	if (#ret == 0) then return {} end -- This is in place of the old "array()" function (now deleted because array(...) overwrote it)
 	for k,v in pairs( ret ) do
 		self.prf = self.prf + 1/3
-		if (blocked_types[typeids[k]]) then ret[k] = nil end
+		if (blocked_types[rawget(typeids, k)]) then ret[k] = nil end
 	end
 	return ret
 end
@@ -64,13 +64,13 @@ end
 registerOperator( "kvarray", "", "r", function( self, args )
 	local ret = {}
 
-	local values = args[2]
-	local types = args[3]
+	local values = rawget(args, 2)
+	local types = rawget(args, 3)
 
 	for k,v in pairs( values ) do
 		if not blocked_types[types[k]] then
-			local key = k[1]( self, k )
-			local value = v[1]( self, v )
+			local key = rawget(k, 1)( self, k )
+			local value = rawget(v, 1)( self, v )
 
 			ret[key] = value
 
@@ -85,8 +85,8 @@ end)
 -- = operator
 --------------------------------------------------------------------------------
 registerOperator("ass", "r", "r", function(self, args)
-	local lhs, op2, scope = args[2], args[3], args[4]
-	local      rhs = op2[1](self, op2)
+	local lhs, op2, scope = rawget(args, 2), rawget(args, 3), rawget(args, 4)
+	local      rhs = rawget(op2, 1)(self, op2)
 
 	local Scope = self.Scopes[scope]
 	if !Scope.lookup then Scope.lookup = {} end
@@ -124,9 +124,9 @@ registerCallback( "postinit", function()
 		local name = k:lower()
 		if (name == "normal") then name = "number" end
 		local nameupperfirst = upperfirst( name )
-		local id = v[1]
-		local default = v[2]
-		local typecheck = v[6]
+		local id = rawget(v, 1)
+		local default = rawget(v, 2)
+		local typecheck = rawget(v, 6)
 
 		if (!blocked_types[id]) then -- blocked check start
 
@@ -150,14 +150,14 @@ registerCallback( "postinit", function()
 			end
 
 			registerOperator("idx", id.."=rn", id, function(self,args)
-				local op1, op2 = args[2], args[3]
-				local array, index = op1[1](self,op1), op2[1](self,op2)
+				local op1, op2 = rawget(args, 2), rawget(args, 3)
+				local array, index = rawget(op1, 1)(self,op1), rawget(op2, 1)(self,op2)
 				return getter( self, array, index )
 			end)
 
 			registerFunction( name, "r:n", id, function(self,args)
-				local op1, op2 = args[2], args[3]
-				local array, index = op1[1](self,op1), op2[1](self,op2)
+				local op1, op2 = rawget(args, 2), rawget(args, 3)
+				local array, index = rawget(op1, 1)(self,op1), rawget(op2, 1)(self,op2)
 				return getter( self, array, index )
 			end)
 
@@ -180,14 +180,14 @@ registerCallback( "postinit", function()
 			end
 
 			registerOperator("idx", id.."=rn"..id, id, function(self,args)
-				local op1, op2, op3 = args[2], args[3], args[4]
-				local array, index, value = op1[1](self,op1), op2[1](self,op2), op3[1](self,op3)
+				local op1, op2, op3 = rawget(args, 2), rawget(args, 3), rawget(args, 4)
+				local array, index, value = rawget(op1, 1)(self,op1), rawget(op2, 1)(self,op2), rawget(op3, 1)(self,op3)
 				return setter( self, array, index, value )
 			end)
 
 			registerFunction("set" .. nameupperfirst, "r:n"..id, id, function(self,args)
-				local op1, op2, op3 = args[2], args[3], args[4]
-				local array, index, value = op1[1](self,op1), op2[1](self,op2), op3[1](self,op3)
+				local op1, op2, op3 = rawget(args, 2), rawget(args, 3), rawget(args, 4)
+				local array, index, value = rawget(op1, 1)(self,op1), rawget(op2, 1)(self,op2), rawget(op3, 1)(self,op3)
 				return setter( self, array, index, value )
 			end)
 
@@ -199,8 +199,8 @@ registerCallback( "postinit", function()
 			__e2setcost(7)
 
 			registerFunction( "push" .. nameupperfirst, "r:" .. id, id, function(self,args)
-				local op1, op2 = args[2], args[3]
-				local array, value = op1[1](self,op1), op2[1](self,op2)
+				local op1, op2 = rawget(args, 2), rawget(args, 3)
+				local array, value = rawget(op1, 1)(self,op1), rawget(op2, 1)(self,op2)
 				return setter( self, array, #array + 1, value )
 			end)
 
@@ -209,8 +209,8 @@ registerCallback( "postinit", function()
 			-- Inserts the value at the specified index. Subsequent values are moved up to compensate.
 			--------------------------------------------------------------------------------
 			registerFunction( "insert" .. nameupperfirst, "r:n" .. id, id, function( self, args )
-				local op1, op2, op3 = args[2], args[3], args[4]
-				local array, index, value = op1[1](self,op1), op2[1](self,op2), op3[1](self,op3)
+				local op1, op2, op3 = rawget(args, 2), rawget(args, 3), rawget(args, 4)
+				local array, index, value = rawget(op1, 1)(self,op1), rawget(op2, 1)(self,op2), rawget(op3, 1)(self,op3)
 				return setter( self, array, index, value, true )
 			end)
 
@@ -219,8 +219,8 @@ registerCallback( "postinit", function()
 			-- Removes and returns the last value in the array.
 			--------------------------------------------------------------------------------
 			registerFunction( "pop" .. nameupperfirst, "r:", id, function(self,args)
-				local op1 = args[2]
-				local array = op1[1](self,op1)
+				local op1 = rawget(args, 2)
+				local array = rawget(op1, 1)(self,op1)
 				if (!array) then return fixDefault( default ) end
 				return getter( self, array, #array, true )
 			end)
@@ -230,8 +230,8 @@ registerCallback( "postinit", function()
 			-- Inserts the value at the beginning of the array. Subsequent values are moved up to compensate.
 			--------------------------------------------------------------------------------
 			registerFunction( "unshift" .. nameupperfirst, "r:" .. id, id, function(self,args)
-				local op1, op2 = args[2], args[3]
-				local array, value = op1[1](self,op1), op2[1](self,op2)
+				local op1, op2 = rawget(args, 2), rawget(args, 3)
+				local array, value = rawget(op1, 1)(self,op1), rawget(op2, 1)(self,op2)
 				return setter( self, array, 1, value, true )
 			end)
 
@@ -240,8 +240,8 @@ registerCallback( "postinit", function()
 			-- Removes and returns the first value of the array. Subsequent values are moved down to compensate.
 			--------------------------------------------------------------------------------
 			registerFunction( "shift" .. nameupperfirst, "r:", id, function(self,args)
-				local op1 = args[2]
-				local array = op1[1](self,op1)
+				local op1 = rawget(args, 2)
+				local array = rawget(op1, 1)(self,op1)
 				if (!array) then return fixDefault( default ) end
 				return getter( self, array, 1, true )
 			end)
@@ -251,8 +251,8 @@ registerCallback( "postinit", function()
 			-- Removes and returns the specified value of the array. Subsequent values are moved down to compensate.
 			--------------------------------------------------------------------------------
 			registerFunction( "remove" .. nameupperfirst, "r:n", id, function(self,args)
-				local op1, op2 = args[2], args[3]
-				local array, index = op1[1](self,op1), op2[1](self,op2)
+				local op1, op2 = rawget(args, 2), rawget(args, 3)
+				local array, index = rawget(op1, 1)(self,op1), rawget(op2, 1)(self,op2)
 				if (!array or !index) then return fixDefault( default ) end
 				return getter( self, array, index, true )
 			end)
@@ -263,12 +263,12 @@ registerCallback( "postinit", function()
 			__e2setcost(0)
 
 			registerOperator("fea", "n" .. id .. "r", "", function(self, args)
-				local keyname, valname = args[2], args[3]
+				local keyname, valname = rawget(args, 2), rawget(args, 3)
 
-				local tbl = args[4]
-				tbl = tbl[1](self, tbl)
+				local tbl = rawget(args, 4)
+				tbl = rawget(tbl, 1)(self, tbl)
 
-				local statement = args[5]
+				local statement = rawget(args, 5)
 
 				for key, value in pairs(tbl) do
 					if not typecheck(value) then

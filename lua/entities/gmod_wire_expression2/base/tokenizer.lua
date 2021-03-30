@@ -18,7 +18,7 @@ function Tokenizer.Execute(...)
 end
 
 function Tokenizer:Error(message, offset)
-	error(message .. " at line " .. self.tokenline .. ", char " .. (self.tokenchar + (offset or 0)), 0)
+	error("[ERROR] " .. message .. " at line " .. self.tokenline .. ", char " .. (self.tokenchar + (offset or 0)), 0)
 end
 
 function Tokenizer:Process(buffer, params)

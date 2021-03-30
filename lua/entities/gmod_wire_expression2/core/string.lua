@@ -27,8 +27,8 @@ registerType("string", "s", "",
 __e2setcost(3) -- temporary
 
 registerOperator("ass", "s", "s", function(self, args)
-	local op1, op2, scope = args[2], args[3], args[4]
-	local      rv2 = op2[1](self, op2)
+	local op1, op2, scope = rawget(args, 2), rawget(args, 3), rawget(args, 4)
+	local      rv2 = rawget(op2, 1)(self, op2)
 	self.Scopes[scope][op1] = rv2
 	self.Scopes[scope].vclk[op1] = true
 	return rv2
@@ -37,29 +37,29 @@ end)
 /******************************************************************************/
 
 registerOperator("is", "s", "n", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2)
+	local rv1 = rawget(op1, 1)(self, op1)
 
 	return rv1 ~= "" and 1 or 0
 end)
 
 registerOperator("eq", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	return rv1 == rv2 and 1 or 0
 end)
 
 registerOperator("neq", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	return rv1 ~= rv2 and 1 or 0
 end)
 
 registerOperator("geq", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + math.min(#rv1, #rv2) / 10
 
@@ -67,8 +67,8 @@ registerOperator("geq", "ss", "n", function(self, args)
 end)
 
 registerOperator("leq", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + math.min(#rv1, #rv2) / 10
 
@@ -76,8 +76,8 @@ registerOperator("leq", "ss", "n", function(self, args)
 end)
 
 registerOperator("gth", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + math.min(#rv1, #rv2) / 10
 
@@ -85,8 +85,8 @@ registerOperator("gth", "ss", "n", function(self, args)
 end)
 
 registerOperator("lth", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + math.min(#rv1, #rv2) / 10
 
@@ -98,8 +98,8 @@ end)
 __e2setcost(10) -- temporary
 
 registerOperator("add", "ss", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + #rv1*0.01 + #rv2*0.01
 
@@ -109,8 +109,8 @@ end)
 /******************************************************************************/
 
 registerOperator("add", "sn", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + #rv1*0.01
 
@@ -118,8 +118,8 @@ registerOperator("add", "sn", "s", function(self, args)
 end)
 
 registerOperator("add", "ns", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + #rv2*0.01
 
@@ -129,8 +129,8 @@ end)
 /******************************************************************************/
 
 registerOperator("add", "sv", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + #rv1*0.01
 
@@ -138,19 +138,19 @@ registerOperator("add", "sv", "s", function(self, args)
 end)
 
 registerOperator("add", "vs", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + #rv2*0.01
 
-	return ("[%s,%s,%s]%s"):format( rv1[1],rv1[2],rv1[3],rv2)
+	return ("[%s,%s,%s]%s"):format( rawget(rv1, 1),rawget(rv1, 2),rawget(rv1, 3),rv2)
 end)
 
 /******************************************************************************/
 
 registerOperator("add", "sa", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + #rv1*0.01
 
@@ -158,12 +158,12 @@ registerOperator("add", "sa", "s", function(self, args)
 end)
 
 registerOperator("add", "as", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 
 	self.prf = self.prf + #rv2*0.01
 
-	return ("[%s,%s,%s]%s"):format( rv1[1],rv1[2],rv1[3],rv2)
+	return ("[%s,%s,%s]%s"):format( rawget(rv1, 1),rawget(rv1, 2),rawget(rv1, 3),rv2)
 end)
 
 /******************************************************************************/
@@ -189,23 +189,23 @@ local utf8_char = utf8.char
 local utf8_byte = utf8.codepoint
 
 registerFunction("toChar", "n", "s", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2)
+	local rv1 = rawget(op1, 1)(self, op1)
 	if rv1 < 0 then return "" end
 	if rv1 > 255 then return "" end
 	return string_char(rv1)
 end)
 
 registerFunction("toByte", "s", "n", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2)
+	local rv1 = rawget(op1, 1)(self, op1)
 	if rv1 == "" then return -1 end
 	return string_byte(rv1)
 end)
 
 registerFunction("toByte", "sn", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 	if rv2 < 1 || rv2 > string_len(rv1) then return -1 end
 	return string_byte(rv1, rv2)
 end)
@@ -213,8 +213,8 @@ end)
 local math_floor = math.floor
 
 registerFunction("toUnicodeChar", "n", "s", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2)
+	local rv1 = rawget(op1, 1)(self, op1)
 
 	-- upper limit used to be 2097152, new limit acquired using pcall and a for loop
 	-- above this limit, the function causes a lua error
@@ -224,8 +224,8 @@ registerFunction("toUnicodeChar", "n", "s", function(self, args)
 end)
 
 registerFunction("toUnicodeByte", "s", "n", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2)
+	local rv1 = rawget(op1, 1)(self, op1)
 	if rv1 == "" then return -1 end
 
 	return utf8_byte(rv1)
@@ -234,26 +234,26 @@ end)
 /******************************************************************************/
 
 registerFunction("index", "s:n", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 	return rv1:sub(rv2, rv2)
 end)
 
 registerFunction("left", "s:n", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 	return rv1:Left(rv2)
 end)
 
 registerFunction("right", "s:n", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2)
 	return rv1:Right(rv2)
 end)
 
 registerFunction("sub", "s:nn", "s", function(self, args)
-	local op1, op2, op3 = args[2], args[3], args[4]
-	local rv1, rv2, rv3 = op1[1](self, op1), op2[1](self, op2), op3[1](self, op3)
+	local op1, op2, op3 = rawget(args, 2), rawget(args, 3), rawget(args, 4)
+	local rv1, rv2, rv3 = rawget(op1, 1)(self, op1), rawget(op2, 1)(self, op2), op3[1](self, op3)
 	return rv1:sub(rv2, rv3)
 end)
 
@@ -266,26 +266,26 @@ e2function string string:operator[](index)
 end
 
 registerFunction("upper", "s:", "s", function(self, args)
-	local op1 = args[2], args[3]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2), rawget(args, 3)
+	local rv1 = rawget(op1, 1)(self, op1)
 	return rv1:upper()
 end)
 
 registerFunction("lower", "s:", "s", function(self, args)
-	local op1 = args[2], args[3]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2), rawget(args, 3)
+	local rv1 = rawget(op1, 1)(self, op1)
 	return rv1:lower()
 end)
 
 registerFunction("length", "s:", "n", function(self, args)
-	local op1 = args[2], args[3]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2), rawget(args, 3)
+	local rv1 = rawget(op1, 1)(self, op1)
 	return rv1:len()
 end)
 
 registerFunction("unicodeLength", "s:", "n", function(self, args)
-	local op1 = args[2], args[3]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2), rawget(args, 3)
+	local rv1 = rawget(op1, 1)(self, op1)
 	-- the string.gsub method is inconsistent with how writeUnicodeString and toUnicodeByte handles badly-formed sequences.
 	-- local _, length = string.gsub (rv1, "[^\128-\191]", "")
 	local length = 0
@@ -310,28 +310,28 @@ end)
 /******************************************************************************/
 
 registerFunction("repeat", "s:n", "s", function(self,args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), math.abs(op2[1](self, op2))
+	local op1, op2 = rawget(args, 2), rawget(args, 3)
+	local rv1, rv2 = rawget(op1, 1)(self, op1), math.abs(rawget(op2, 1)(self, op2))
 	self.prf = self.prf + #rv1 * rv2 * 0.01
 	if self.prf > e2_tickquota then error("perf", 0) end
 	return rv1:rep(rv2)
 end)
 
 registerFunction("trim", "s:", "s", function(self,args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2)
+	local rv1 = rawget(op1, 1)(self, op1)
 	return string.Trim(rv1)
 end)
 
 registerFunction("trimLeft", "s:", "s", function(self,args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2)
+	local rv1 = rawget(op1, 1)(self, op1)
 	return rv1:match( "^ *(.-)$")
 end)
 
 registerFunction("trimRight", "s:", "s", function(self,args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget(args, 2)
+	local rv1 = rawget(op1, 1)(self, op1)
 	return rv1:TrimRight()
 end)
 
@@ -344,7 +344,7 @@ local find = string.find
 
 --- Returns the 1st occurrence of the string <pattern>, returns 0 if not found. Prints malformed string errors to the chat area.
 e2function number string:findRE(string pattern)
-	local OK, Ret = pcall(string.find, this, pattern)
+	local OK, Ret = pcall(find, this, pattern)
 	if not OK then
 		self.player:ChatPrint(Ret)
 		return 0
@@ -438,8 +438,8 @@ local table_remove = table.remove
 --- runs [[string.match]](<this>, <pattern>) and returns the sub-captures as an array. Prints malformed pattern errors to the chat area.
 e2function array string:match(string pattern)
 	local args = {pcall(string_match, this, pattern)}
-	if not args[1] then
-		self.player:ChatPrint(args[2] or "Unknown error in str:match")
+	if not rawget(args, 1) then
+		self.player:ChatPrint(rawget(args, 2) or "Unknown error in str:match")
 		return {}
 	else
 		table_remove( args, 1 ) -- Remove "OK" boolean
@@ -450,8 +450,8 @@ end
 --- runs [[string.match]](<this>, <pattern>, <position>) and returns the sub-captures as an array. Prints malformed pattern errors to the chat area.
 e2function array string:match(string pattern, position)
 	local args = {pcall(string_match, this, pattern, position)}
-	if not args[1] then
-		self.player:ChatPrint(args[2] or "Unknown error in str:match")
+	if not rawget(args, 1) then
+		self.player:ChatPrint(rawget(args, 2) or "Unknown error in str:match")
 		return {}
 	else
 		table_remove( args, 1 ) -- Remove "OK" boolean
@@ -539,7 +539,7 @@ local function ToUnicodeChar(self, args)
 	if count == 0 then return "" end
 	local codepoints = {}
 	for i = 1, count do
-		local value = args[i]
+		local value = rawget(args, i)
 		if isnumber(value) then
 			value = math_floor(value)
 			if 0 <= value and value <= 0x10FFFF then

@@ -11,12 +11,37 @@ end
 local unpack = unpack
 local IsValid = IsValid
 
+local tableInsert = table.insert
+local tableConcat = table.concat
+local tableRemove = table.remove
+local tableToString = table.ToString
+
+local stringMatch = string.match
+local stringStartsWith = string.StartsWith
+local stringFormat = string.format
+local stringSub = string.sub
+
+local StoreEntityModifier = duplicator.StoreEntityModifier
+
+local mathClamp = math.Clamp
+local mathHuge = math.huge
+local mathFloor = math.floor
+local mathMax = math.max
+
+local isSinglePlayer = game.SinglePlayer()
+
 -- This functions should not be used in functions that tend to be used very often, as it is slower than getting the arguments manually.
 function E2Lib.getArguments(self, args)
 	local ret = {}
-	for i = 2, #args[7] + 1 do
-		ret[i - 1] = args[i][1](self, args[i])
+
+	local count = #rawget(args, 7) + 1
+	for i = 2, count do
+	    local thisArg = rawget(args, i)
+	    local first = rawget(thisArg, 1)
+
+		rawset(ret, i - 1, first(self, thisAarg))
 	end
+
 	return unpack(ret)
 end
 
@@ -27,16 +52,17 @@ E2Lib.setPos = WireLib.setPos
 E2Lib.setAng = WireLib.setAng
 
 function E2Lib.setMaterial(ent, material)
-	material = WireLib.IsValidMaterial(material)
+	material = rawget(WireLib, "IsValidMaterial")(material)
 	ent:SetMaterial(material)
-	duplicator.StoreEntityModifier(ent, "material", { MaterialOverride = material })
+
+	StoreEntityModifier(ent, "material", { MaterialOverride = material })
 end
 
 function E2Lib.setSubMaterial(ent, index, material)
-	index = math.Clamp(index, 0, 255)
-	material = WireLib.IsValidMaterial(material)
+	index = mathClamp(index, 0, 255)
+	material = rawget(WireLib, "IsValidMaterial")(material)
 	ent:SetSubMaterial(index, material)
-	duplicator.StoreEntityModifier(ent, "submaterial", { ["SubMaterialOverride_"..index] = material })
+	StoreEntityModifier(ent, "submaterial", { ["SubMaterialOverride_"..index] = material })
 end
 
 -- Returns a default e2 table.
@@ -73,7 +99,9 @@ function E2Lib.getHash(self, data)
 	-- I'm making it default to -1 if it for some reason throws a letter in there, breaking tonumber.
 	]] --
 
-	if self then self.prf = self.prf + #data / 10 end
+	if self then
+	    rawset(self, "prf", rawget(self, "prf") + #data / 10)
+	end
 	return tonumber(util_CRC(data)) or -1
 end
 
@@ -83,72 +111,115 @@ function E2Lib.typeName(typeid)
 	if typeid == "" then return "void" end
 	if typeid == "n" then return "number" end
 
-	local tp = wire_expression_types2[typeid]
+	local tp = rawget(wire_expression_types2i, typeid)
 	if not tp then error("Type ID '" .. typeid .. "' not found", 2) end
 
-	local typename = tp[1]:lower()
+	local first = rawget(tp, 1)
+	local typename = rawget(first, "lower")(first)
 	return typename or "unknown"
 end
 
 function E2Lib.splitType(args)
-	local ret = {}
 	local thistype
+
+	local ret = {}
+    local retCount = 0
+
+	local argsCount = #args
+	local sub = rawget(args, "sub")
+	local typeName = rawget(E2Lib, "typeName")
+
 	local i = 1
-	while i <= #args do
-		local letter = args:sub(i, i)
+	while i <= argsCount do
+		local letter = sub(args, i, i)
+
 		if letter == ":" then
-			if #ret ~= 1 then error("Misplaced ':' in args", 2) end
-			thistype = ret[1]
+			if retCount ~= 1 then error("Misplaced ':' in args", 2) end
+			thistype = rawget(ret, 1)
+
 			ret = {}
+			retCount = 0
+
 		elseif letter == "." then
-			if args:sub(i) ~= "..." then error("Misplaced '.' in args", 2) end
-			table.insert(ret, "...")
+			if sub(args, i) ~= "..." then error("Misplaced '.' in args", 2) end
+
+			tableInsert(ret, "...")
+			retCount = retCount + 1
+
 			i = i + 2
+
 		elseif letter == "=" then
-			if #ret ~= 1 then error("Misplaced '=' in args", 2) end
+			if retCount ~= 1 then error("Misplaced '=' in args", 2) end
+
 			ret = {}
+			retCount = 0
+
 		else
 			local typeid = letter
 			if letter == "x" then
-				typeid = args:sub(i, i + 2)
+				typeid = sub(args, i, i + 2)
 				i = i + 2
 			end
-			table.insert(ret, E2Lib.typeName(typeid))
+
+			tableInsert(ret, typeName(typeid))
+			retCount = retCount + 1
 		end
+
 		i = i + 1
 	end
+
 	return thistype, ret
 end
 
 -- given a function signature like "setNumber(xwl:sn)" and an optional return typeid, generates a nice, readable signature
 function E2Lib.generate_signature(signature, rets, argnames)
-	local funcname, args = string.match(signature, "([^(]+)%(([^)]*)%)")
+	local funcname, args = stringMatch(signature, "([^(]+)%(([^)]*)%)")
 	if not funcname then error("malformed signature") end
 
-	local thistype, args = E2Lib.splitType(args)
+	local thistype, args = splitType(args)
 
 	if argnames then
-		for i = 1, #args do
-			if argnames[i] then args[i] = args[i] .. " " .. argnames[i] end
+	    local argsCount = #args
+
+		for i = 1, argsCount do
+		    local argName = rawget(argnames, i)
+			if argName then
+			    local arg = rawget(args, i)
+			    rawset(args, i, arg .. " " .. argName)
+			end
 		end
 	end
-	local new_signature = string.format("%s(%s)", funcname, table.concat(args, ","))
-	if thistype then new_signature = thistype .. ":" .. new_signature end
 
-	return (not rets or rets == "") and (new_signature) or (E2Lib.typeName(rets) .. "=" .. new_signature)
+	local new_signature = stringFormat("%s(%s)", funcname, tableConcat(args, ","))
+
+	if thistype then
+	    new_signature = thistype .. ":" .. new_signature
+	end
+
+	local emptyRets = not rets or rets == ""
+
+	if emptyRets then
+	    return new_signature
+    else
+        return rawget(E2Lib, "typeName")(rets) .. "=" .. new_signature
+    end
 end
 
 -- ------------------------ various entity checkers ----------------------------
 
 -- replaces an E2Lib function (ex.: isOwner) and notifies plugins
-function E2Lib.replace_function(funcname, func)
-	checkargtype(1, funcname, "string")
+function E2Lib.replace_function(funcName, func)
+	checkargtype(1, funcName, "string")
 	checkargtype(2, func, "function")
 
-	local oldfunc = E2Lib[funcname]
-	if not isfunction(oldfunc) then error("No E2Lib function by the name " .. funcname .. " found.", 2) end
-	E2Lib[funcname] = func
-	wire_expression2_CallHook("e2lib_replace_function", funcname, func, oldfunc)
+	local oldfunc = rawget(E2Lib, funcName)
+
+	if not isfunction(oldfunc) then
+	    error("No E2Lib function by the name " .. funcName .. " found.", 2)
+	end
+
+	rawset(E2Lib, funcName, func)
+	wire_expression2_CallHook("e2lib_replace_function", funcName, func, oldfunc)
 end
 
 function E2Lib.validPhysics(entity)
@@ -157,34 +228,55 @@ function E2Lib.validPhysics(entity)
 		if entity:GetMoveType() ~= MOVETYPE_VPHYSICS then return false end
 		return entity:GetPhysicsObject():IsValid()
 	end
+
 	return false
 end
 
 -- This function gets wrapped when CPPI is detected, see very end of this file
 function E2Lib.getOwner(self, entity)
 	if entity == nil then return end
-	if entity == self.entity or entity == self.player then return self.player end
-	if entity.GetPlayer then
-		local ply = entity:GetPlayer()
+
+	local selfEntity = rawget(self, "entity")
+	local selfPlayer = rawget(self, "player")
+
+	if entity == selfEntity or entity == selfPlayer then
+	    return selfPlayer
+	end
+
+	local entityGetPlayer = entity.GetPlayer
+	if entityGetPlayer then
+		local ply = entityGetPlayer(entity)
 		if IsValid(ply) then return ply end
 	end
 
 	local OnDieFunctions = entity.OnDieFunctions
+
 	if OnDieFunctions then
-		if OnDieFunctions.GetCountUpdate then
-			if OnDieFunctions.GetCountUpdate.Args then
-				if OnDieFunctions.GetCountUpdate.Args[1] then return OnDieFunctions.GetCountUpdate.Args[1] end
+	    local getCountUpdate = rawget(OnDieFunctions, "GetCountUpdate")
+
+		if getCountUpdate then
+		    local getCountUpdateArgs = rawget(getCountUpdate, "Args")
+
+			if getCountUpdateArgs then
+			    local firstArg = rawget(getCountUpdateArgs, 1)
+				if firstArg then return firstArg end
 			end
 		end
-		if OnDieFunctions.undo1 then
-			if OnDieFunctions.undo1.Args then
-				if OnDieFunctions.undo1.Args[2] then return OnDieFunctions.undo1.Args[2] end
+
+		local undo1 = rawget(OnDieFunctions, "undo1")
+		if undo1 then
+		    local undo1Args = rawget(undo1, "Args")
+
+			if undo1Args then
+			    local secondArg = rawget(undo1Args, 2)
+				if secondArg then return secondArg end
 			end
 		end
 	end
 
-	if entity.GetOwner then
-		local ply = entity:GetOwner()
+	local entityGetOwner = entity.GetOwner
+	if entityGetOwner then
+		local ply = entityGetOwner(entity)
 		if IsValid(ply) then return ply end
 	end
 
@@ -202,19 +294,21 @@ function E2Lib.isFriend(owner, player)
 end
 
 function E2Lib.isOwner(self, entity)
-	if game.SinglePlayer() then return true end
-	local player = self.player
-	local owner = E2Lib.getOwner(self, entity)
+	if isSinglePlayer then return true end
+
+	local owner = rawget(E2Lib, "getOwner")(self, entity)
+
 	if not IsValid(owner) then return false end
 
-	return E2Lib.isFriend(owner, player)
+	local player = rawget(self, "player")
+	return rawget(E2Lib, "isFriend")(owner, player)
 end
 
 local isOwner = E2Lib.isOwner
 
 -- Checks whether the player is the chip's owner or in a pod owned by the chip's owner. Assumes that ply is really a player.
 function E2Lib.canModifyPlayer(self, ply)
-	if ply == self.player then return true end
+	if ply == rawget(self, "player") then return true end
 
 	if not IsValid(ply) then return false end
 	if not ply:IsPlayer() then return false end
@@ -242,17 +336,23 @@ local table_length_lookup = {
 
 function E2Lib.guess_type(value)
 	local vtype = type(value)
-	if type_lookup[vtype] then return type_lookup[vtype] end
+	local vtypeLookup = rawget(type_lookup, vtype)
+	if vtypeLookup then return vtypeLookup end
+
 	if IsValid(value) then return "e" end
-	if value.EntIndex then return "e" end
+	if rawget(value, "EntIndex") then return "e" end
+
 	if vtype == "table" then
-		if table_length_lookup[#value] then return table_length_lookup[#value] end
-		if value.HitPos then return "xrd" end
+	    local val = rawget(table_length_lookup, #value)
+	    if val then return val end
+		if rawget(value, "HitPos") then return "xrd" end
 	end
 
 	for typeid, v in pairs(wire_expression_types2) do
-		if v[5] then
-			local ok = pcall(v[5], value)
+	    local fifth = rawget(v, 5)
+
+		if fifth then
+			local ok = pcall(fifth, value)
 			if ok then return typeid end
 		end
 	end
@@ -273,21 +373,16 @@ end
 -- ------------------------ list filtering -------------------------------------------------
 
 function E2Lib.filterList(list, criterion)
-	local index = 1
-	-- print("-- filterList: "..#list.." entries --")
+	local listSize = #list
 
-	while index <= #list do
-		if not criterion(list[index]) then
-			-- MsgC(Color(128,128,128), "-    "..tostring(list[index]).."\n")
-			list[index] = list[#list]
-			table.remove(list)
-		else
-			-- print(string.format("+%3d %s", index, tostring(list[index])))
-			index = index + 1
-		end
-	end
+	for i = listSize, 1, -1 do
+	    local item = rawget(list, i)
 
-	-- print("--------")
+	    if not criterion(item) then
+	        tableRemove( list, i )
+        end
+    end
+
 	return list
 end
 
@@ -298,7 +393,7 @@ end
 -- usable error message. If not, then it's an error not caused by an error in
 -- user code, and so we dump a stack trace to the console to help debug it.
 function E2Lib.errorHandler(message)
-	if string.match(message, " at line ") then return message end
+	if stringStartsWith(message, "[ERROR] ") then return message end
 
 	print("Internal error - please report to https://github.com/wiremod/wire/issues")
 	print(message)
@@ -372,16 +467,25 @@ for token, op in pairs(E2Lib.optable_inv) do
 	end
 end
 
+local op_order = { ["+"] = 1, ["-"] = 2, ["*"] = 3, ["/"] = 4, ["%"] = 5, ["^"] = 6, ["="] = 7, ["!"] = 8, [">"] = 9, ["<"] = 10, ["&"] = 11, ["|"] = 12, ["?"] = 13, [":"] = 14, [","] = 15, ["("] = 16, [")"] = 17, ["{"] = 18, ["}"] = 19, ["["] = 20, ["]"] = 21, ["$"] = 22, ["~"] = 23 }
 function E2Lib.printops()
-	local op_order = { ["+"] = 1, ["-"] = 2, ["*"] = 3, ["/"] = 4, ["%"] = 5, ["^"] = 6, ["="] = 7, ["!"] = 8, [">"] = 9, ["<"] = 10, ["&"] = 11, ["|"] = 12, ["?"] = 13, [":"] = 14, [","] = 15, ["("] = 16, [")"] = 17, ["{"] = 18, ["}"] = 19, ["["] = 20, ["]"] = 21, ["$"] = 22, ["~"] = 23 }
 	print("E2Lib.optable = {")
-	for k, v in pairs_sortkeys(E2Lib.optable, function(a, b) return (op_order[a] or math.huge) < (op_order[b] or math.huge) end) do
-		local tblstring = table.ToString(v)
-		tblstring = tblstring:gsub(",}", "}")
-		tblstring = tblstring:gsub("{(.)=", " {[\"%1\"] = ")
-		tblstring = tblstring:gsub(",(.)=", ", [\"%1\"] = ")
-		print(string.format("\t[%q] = %s,", k, tblstring))
+
+	local optable = rawget(E2Lib, "optable")
+	local sortFunc = function(a, b)
+	    return (rawget(op_orders, a) or mathHuge) < (rawget(op_orders, b) or mathHuge)
+    end
+
+	for k, v in pairs_sortkeys(optable, sortFunc) do
+		local tblstring = tableToString(v)
+		local gsub = tblstring.gsub
+
+		tblstring = gsub(tblstring, ",}", "}")
+		tblstring = gsub(tblstring, "{(.)=", " {[\"%1\"] = ")
+		tblstring = gsub(tblstring, ",(.)=", ", [\"%1\"] = ")
+		print(stringFormat("\t[%q] = %s,", k, tblstring))
 	end
+
 	print("}")
 end
 
@@ -395,7 +499,7 @@ function E2Lib.limitString(text, length)
 	if #text <= length then
 		return text
 	else
-		return string.sub(text, 1, length) .. "..."
+		return stringSub(text, 1, length) .. "..."
 	end
 end
 
@@ -431,7 +535,7 @@ do
 
 	-- escapes special characters
 	function E2Lib.encode(str)
-		return str:gsub(".", enctbl)
+	    return str:gsub(".", enctbl)
 	end
 
 	-- decodes escaped characters
@@ -448,44 +552,55 @@ do
 	local extensions, printExtensions, conCommandSetExtensionStatus
 
 	function E2Lib.GetExtensions()
-		return extensions.list
+		return rawget(extensions, "list")
 	end
 
 	function E2Lib.GetExtensionStatus(name)
-		name = name:Trim():lower()
-		return extensions.status[name]
+	    name = name:Trim()
+	    name = name:lower()
+		return rawget(rawget(extensions, "status"), name)
 	end
 
 	function E2Lib.GetExtensionDocumentation(name)
-		return extensions.documentation[name] or {}
+		return rawget(rawget(extensions, "documentation"), name) or {}
 	end
 
 	if SERVER then -- serverside stuff
+	    local addNetworkString = rawget(util, "AddNetworkString")
 
-		util.AddNetworkString( "wire_expression2_server_send_extensions_list" )
-		util.AddNetworkString( "wire_expression2_client_request_print_extensions" )
-		util.AddNetworkString( "wire_expression2_client_request_set_extension_status" )
+		addNetworkString( "wire_expression2_server_send_extensions_list" )
+		addNetworkString( "wire_expression2_client_request_print_extensions" )
+		addNetworkString( "wire_expression2_client_request_set_extension_status" )
 
 		function wire_expression2_PreLoadExtensions()
-			hook.Run( "Expression2_PreLoadExtensions" )
+			rawget(hook, "Run")( "Expression2_PreLoadExtensions" )
+			local query = rawget(sql, "Query")
+
 			extensions = { status = {}, list = {}, prettyList = {}, documentation = {} }
-			local list = sql.Query( "SELECT * FROM wire_expression2_extensions" )
+			local list = query( "SELECT * FROM wire_expression2_extensions" )
+
 			if list then
-				for i = 1, #list do
-					local row = list[ i ]
-					E2Lib.SetExtensionStatus( row.name, row.enabled )
+			    local listCount = #list
+
+				for i = 1, listCount do
+					local row = rawget(list, i)
+					rawget(E2Lib, "SetExtensionStatus")( rawget(row, "name"), rawget(row, "enabled"))
 				end
+
 			else
-				sql.Query( "CREATE TABLE wire_expression2_extensions ( name VARCHAR(32) PRIMARY KEY, enabled BOOLEAN )" )
+				query( "CREATE TABLE wire_expression2_extensions ( name VARCHAR(32) PRIMARY KEY, enabled BOOLEAN )" )
 			end
-			extensions.save = true
+
+			rawset(extensions, "save", true)
 		end
 
 		function E2Lib.RegisterExtension(name, default, description, warning)
 			name = name:Trim():lower()
+
 			if extensions.status[ name ] == nil then
 				E2Lib.SetExtensionStatus( name, default )
 			end
+
 			extensions.list[ #extensions.list + 1 ] = name
 
 			if description or warning then
@@ -519,44 +634,67 @@ do
 		end
 
 		local function buildPrettyList()
-			local function padLeft( str, len ) return (" "):rep( len - #str ) .. str end
-			local function padRight( str, len ) return str .. (" "):rep( len - #str ) end
-			local function padCenter( str, len ) return padRight( padLeft( str, math.floor( (len + #str) / 2 ) ), len ) end
+		    local rep = (" ").rep
 
-			local list, column1, column2, columnsWidth = extensions.list, {}, {}, 0
-			for i = 1, #list do
-				local name = list[ i ]
+			local function padLeft( str, len ) return rep( " ", len - #str ) .. str end
+			local function padRight( str, len ) return str .. rep( " ", len - #str ) end
+			local function padCenter( str, len ) return padRight( padLeft( str, mathFloor( (len + #str) / 2 ) ), len ) end
+
+			local list, column1, column2, columnsWidth = rawget(extensions, "list"), {}, {}, 0
+
+			local listCount = #list
+			for i = 1, listCount do
+				local name = rawget(list, i)
+
 				if #name > columnsWidth then columnsWidth = #name end
-				if extensions.status[ name ] == true then column1[ #column1 + 1 ] = name else column2[ #column2 + 1 ] = name end
+
+				if rawget(rawget(extensions, "status"), name) == true then
+				    rawset(column1, #column1 + 1, name)
+				else
+				    rawset(column2, #column2 + 1, name)
+				end
 			end
+
 			local mainTitle, column1Title, column2Title = "E2 EXTENSIONS", "ENABLED", "DISABLED"
-			local maxWidth, maxRows = math.max( columnsWidth * 2, #column1Title + #column2Title, #mainTitle - 3 ), math.max( #column1, #column2 )
+			local maxWidth, maxRows = mathMax( columnsWidth * 2, #column1Title + #column2Title, #mainTitle - 3 ), mathMax( #column1, #column2 )
+
 			if maxWidth % 2 ~= 0 then maxWidth = maxWidth + 1 end
+
 			columnsWidth = maxWidth / 2
 			maxWidth = maxWidth + 3
-			local delimiter =  " +-" .. ("-"):rep( columnsWidth ) .. "-+-" .. ("-"):rep( columnsWidth ) .. "-+"
 
-			list =
-			{
-				" +-" .. ("-"):rep( maxWidth ) .. "-+",
+			local delimiter =  " +-" .. rep( "-", columnsWidth ) .. "-+-" .. rep( "-", columnsWidth ) .. "-+"
+
+			list = {
+				" +-" .. rep( "-", maxWidth ) .. "-+",
 				" | " .. padCenter( mainTitle, maxWidth ) .. " |",
 				delimiter,
 				" | " .. padCenter( column1Title, columnsWidth ) .. " | " .. padCenter( column2Title, columnsWidth ) .. " |",
 				delimiter,
 			}
-			for i = 1, maxRows do list[ #list + 1 ] = " | " .. padRight( column1[ i ] or "", columnsWidth ) .. " | " .. padRight( column2[ i ] or "", columnsWidth ) .. " |" end
-			list[ #list + 1 ] = delimiter
+			for i = 1, maxRows do
+			   rawset(list, #list + 1, " | " .. padRight( rawget(column1, i) or "", columnsWidth ) .. " | " .. padRight( rawget(column2, i) or "", columnsWidth ) .. " |")
+			end
 
-			extensions.prettyList = list
+			rawset(list, #list + 1, delimiter)
+
+			rawset(extensions, "prettyList", list)
 		end
 
 		function printExtensions( ply, str )
+            local prettyList = rawget( extensions, "prettyList" )
+            local prettyListCount = #prettyList
+
 			if IsValid( ply ) then
-				if str then ply:PrintMessage( 2, str ) end
-				for i = 1, #extensions.prettyList do ply:PrintMessage( 2, extensions.prettyList[ i ] ) end
+			    local printMessage = ply.PrintMessage
+				if str then printMessage( ply, 2, str ) end
+
+				for i = 1, #prettyList do
+				    printMessage( ply, 2, rawget( prettyList, i ) )
+				end
 			else
 				if str then print( str ) end
-				for i = 1, #extensions.prettyList do print( extensions.prettyList[ i ] ) end
+				for i = 1, prettyListCount do print( rawget( prettyList, i ) ) end
 			end
 		end
 
@@ -603,8 +741,10 @@ do
 
 		function wire_expression2_PostLoadExtensions()
 			table.sort( extensions.list, function( a, b ) return a < b end )
+
 			E2Lib.UpdateClientsideExtensionsList()
 			buildPrettyList()
+
 			if not wire_expression2_is_reload then -- only print once on startup, not on each reload.
 				printExtensions()
 			end
@@ -636,15 +776,22 @@ do
 	-- shared stuff
 
 	local function makeAutoCompleteList( cmd, args )
-		args = args:Trim():lower()
-		local status, list, tbl, j = tobool( cmd:find( "enable" ) ), extensions.list, {}, 1
-		for i = 1, #list do
-			local name = list[ i ]
-			if extensions.status[ name ] ~= status and name:find( args ) then
-				tbl[ j ] = cmd .. " " .. name
+	    local trimmed = args:Trim()
+	    local args = trimmed:lower()
+
+		local status, list, tbl, j = tobool( cmd:find( "enable" ) ), rawget(extensions, "list"), {}, 1
+
+		local listCount = #list
+		for i = 1, listCount do
+			local name = rawget(list, i)
+			local status = rawget(extensions, "status")
+
+			if rawget( status, name ) ~= status and name:find( args ) then
+			    rawset(tbl, j, cmd .. " " .. name)
 				j = j + 1
 			end
 		end
+
 		return tbl
 	end
 
@@ -714,7 +861,9 @@ hook.Add("InitPostEntity", "e2lib", function()
 				local friends = owner:CPPIGetFriends()
 				if not istable(friends) then return end
 
-				for _, friend in pairs(friends) do
+				local friendCount = #friends
+				for i = 1, friendCount do
+				    local friend = rawget(friends, i)
 					if player == friend then return true end
 				end
 
@@ -724,9 +873,14 @@ hook.Add("InitPostEntity", "e2lib", function()
 
 		if debug.getregistry().Entity.CPPIGetOwner then
 			local _getOwner = E2Lib.getOwner
+
 			E2Lib.replace_function("getOwner", function(self, entity)
 				if not IsValid(entity) then return end
-				if entity == self.entity or entity == self.player then return self.player end
+				local selfPlayer = rawget(self, "player")
+
+				if entity == rawget(self, "entity") or entity == selfPlayer then
+				    return selfPlayer
+				end
 
 				local owner = entity:CPPIGetOwner()
 				if IsValid(owner) then return owner end

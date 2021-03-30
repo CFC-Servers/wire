@@ -3,13 +3,33 @@ WireLib = WireLib or {}
 local pairs = pairs
 local setmetatable = setmetatable
 local rawget = rawget
+local rawset = rawset
 local next = next
+local unpack = unpack
 local IsValid = IsValid
 local LocalPlayer = LocalPlayer
 local Entity = Entity
 
 local string = string
 local hook = hook
+
+local tableInsert = table.insert
+local tableSort = table.sort
+local tableRemove = table.remove
+local tableConcat = table.concat
+
+local stringFind = string.find
+local stringSub = string.sub
+local stringExplode = string.Explode
+local stringFormat = string.format
+local stringByte = string.byte
+
+local mathRandom = math.random
+local mathMin = math.min
+local mathAbs = math.abs
+
+local bitBor = bit.bor
+local bitBand = bit.band
 
 -- extra table functions
 
@@ -29,14 +49,16 @@ function table.Compact(tbl, cb, n) -- luacheck: ignore
 	n = n or #tbl
 	local cpos = 1
 	for i = 1, n do
-		if cb(tbl[i]) then
-			tbl[cpos] = tbl[i]
+	    local tblI = rawget(tbl, i)
+
+		if cb(tblI) then
+			rawset(tbl, cpos, tblI)
 			cpos = cpos + 1
 		end
 	end
 
 	while (cpos <= n) do
-		tbl[cpos] = nil
+		rawset(tbl, cpos, nil)
 		cpos = cpos + 1
 	end
 end
@@ -46,47 +68,53 @@ end
 function table.MakeSortedKeys(tbl) -- luacheck: ignore
 	local result = {}
 
-	for k,_ in pairs(tbl) do table.insert(result, k) end
-	table.sort(result)
+	for k,_ in pairs(tbl) do tableInsert(result, k) end
+	tableSort(result)
 
 	return result
 end
 
 
 function string.GetNormalizedFilepath( path ) -- luacheck: ignore
-	local null = string.find(path, "\x00", 1, true)
-	if null then path = string.sub(path, 1, null-1) end
+	local null = stringFind(path, "\x00", 1, true)
+	if null then path = stringSub(path, 1, null-1) end
 
 	local tbl = string.Explode( "[/\\]+", path, true )
+	local tblCount = #tbl
+
 	local i = 1
-	while i <= #tbl do
-		if tbl[i] == "." or tbl[i]=="" then
-			table.remove(tbl, i)
-		elseif tbl[i] == ".." then
-			table.remove(tbl, i)
-			if i>1 then
+	while i <= tblCount do
+	    local tblI = rawget(tbl, i)
+
+		if tblI == "." or tblI == "" then
+			tableRemove(tbl, i)
+		elseif tblI == ".." then
+			tableRemove(tbl, i)
+
+			if i > 1 then
 				i = i - 1
-				table.remove(tbl, i)
+				tableRemove(tbl, i)
 			end
 		else
 			i = i + 1
 		end
 	end
-	return table.concat(tbl, "/")
+
+	return tableConcat(tbl, "/")
 end
 
 -- works like pairs() except that it iterates sorted by keys.
 -- criterion is optional and should be a function(a,b) returning whether a is less than b. (same as table.sort's criterions)
 function pairs_sortkeys(tbl, criterion)
 	local tmp = {}
-	for k, _ in pairs(tbl) do table.insert(tmp,k) end
-	table.sort(tmp, criterion)
+	for k, _ in pairs(tbl) do tableInsert(tmp,k) end
+	tableSort(tmp, criterion)
 
 	local iter, state, index, k = ipairs(tmp)
 	return function()
 		index,k = iter(state, index)
 		if index == nil then return nil end
-		return k,tbl[k]
+		return k, rawget(tbl, k)
 	end
 end
 
@@ -98,19 +126,19 @@ function pairs_sortvalues(tbl, criterion)
 		end
 	or
 		function(a,b)
-			return tbl[a] < tbl[b]
+			return rawget(tbl, a) < rawget(tbl, b)
 		end
 
 	local tmp = {}
 	tbl = tbl or {}
-	for k, _ in pairs(tbl) do table.insert(tmp,k) end
-	table.sort(tmp, crit)
+	for k, _ in pairs(tbl) do tableInsert(tmp,k) end
+	tableSort(tmp, crit)
 
 	local iter, state, index, k = ipairs(tmp)
 	return function()
-		index,k = iter(state, index)
+		index, k = iter(state, index)
 		if index == nil then return nil end
-		return k,tbl[k]
+		return k, rawget(tbl, k)
 	end
 end
 
@@ -120,7 +148,7 @@ end
 function pairs_consume(table)
 	return function()
 		local k, v = next(table)
-		if k then table[k] = nil return k, v end
+		if k then rawset(table, k, nil) return k, v end
 	end
 end
 
@@ -129,7 +157,7 @@ function ipairs_map(tbl, mapfunction)
 	local iter, state, k = ipairs(tbl)
 	return function(state, k)
 		local v
-		k,v = iter(state, k)
+		k, v = iter(state, k)
 		if k == nil then return nil end
 		return k,mapfunction(v)
 	end, state, k
@@ -220,9 +248,9 @@ do -- containers
 			local parent = rawget(self, "parent")
 			local parentindex = rawget(self, "parentindex")
 
-			if value ~= nil and not next(data) and parent then parent[parentindex] = self end
-			data[index] = value
-			if value == nil and not next(data) and parent then parent[parentindex] = nil end
+			if value ~= nil and not next(data) and parent then rawset(parent, parentindex, self) end
+			rawset(data, index, value)
+			if value == nil and not next(data) and parent then rawset(parent, parentindex,  nil) end
 		end
 
 		function autocleanup:__pairs()
@@ -278,7 +306,13 @@ do
 				return
 			end
 			GAMEMODE:AddNotify(Message, Type, Duration)
-			if Sound and sounds[Sound] then surface.PlaySound(sounds[Sound]) end
+			if Sound then
+			    local soundsSound = rawget(sounds, Sound)
+
+			    if soundsSound then
+                    rawget(surface, "PlaySound")(soundsSound)
+                end
+			end
 		end
 
 		net.Receive("wire_addnotify", function(netlen)
@@ -320,8 +354,13 @@ if CLIENT then
 	net.Receive("wire_clienterror", function(netlen)
 		local message = net.ReadString()
 		print("sv: "..message)
-		local lines = string.Explode("\n", message)
-		for i,line in ipairs(lines) do
+
+		local lines = stringExplode("\n", message)
+		local linesCount = #lines
+
+		for i = 1, linesCount do
+		    local line = rawget(lines, i)
+
 			if i == 1 then
 				WireLib.AddNotify(line, NOTIFY_ERROR, 7, NOTIFYSOUND_ERROR1)
 			else
@@ -340,8 +379,10 @@ end
 
 function WireLib.ErrorNoHalt(message)
 	-- ErrorNoHalt clips messages to 512 characters, so chain calls if necessary
-	for i=1,#message, 511 do
-		ErrorNoHalt(message:sub(i,i+510))
+	local messageCount = #message
+	for i = 1, messageCount, 511 do
+
+		ErrorNoHalt(message:sub(i, i + 510))
 	end
 end
 
@@ -350,11 +391,28 @@ function WireLib.GenerateUUID()
 	-- It would be easier to generate this by word rather than by byte, but
 	-- MSVC's RAND_MAX = 0x7FFF, which means math.random(0, 0xFFFF) won't
 	-- return all possible values.
-	local bytes = {}
-	for i = 1, 16 do bytes[i] = math.random(0, 0xFF) end
-	bytes[7] = bit.bor(0x40, bit.band(bytes[7], 0x0F))
-	bytes[9] = bit.bor(0x80, bit.band(bytes[7], 0x3F))
-	return string.format("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x", unpack(bytes))
+	local bytes = {
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF),
+	    mathRandom(0, 0xFF)
+    }
+
+	rawset(bytes, 7, bitBor(0x40, bitBand(rawget(bytes, 7), 0x0F)))
+	rawset(bytes, 9, bitBor(0x80, bitBand(rawget(bytes, 7), 0x3F)))
+	return stringFormat("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x", unpack(bytes))
 end
 
 local PERSISTENT_UUID_KEY = "WireLib.GetServerUUID"
@@ -371,10 +429,10 @@ if SERVER then
 
 	util.AddNetworkString(PERSISTENT_UUID_KEY)
 
-	hook.Add("PlayerInitialSpawn", PERSISTENT_UUID_KEY, function(player)
+	hook.Add("PlayerInitialSpawn", PERSISTENT_UUID_KEY, function(ply)
 		net.Start(PERSISTENT_UUID_KEY)
 		net.WriteString(WireLib.GetServerUUID())
-		net.Send(player)
+		net.Send(ply)
 	end)
 
 else
@@ -481,14 +539,16 @@ if SERVER then
 
 	function WireLib.GetPorts(ent)
 		local eid = ent:EntIndex()
-		return ents_with_inputs[eid], ents_with_outputs[eid]
+		return rawget(ents_with_inputs, eid), rawget(ents_with_outputs, eid)
 	end
 
 	function WireLib._RemoveWire(eid, DontSend) -- To remove the inputs without to remove the entity. Very important for IsWire checks!
-		local hasinputs, hasoutputs = ents_with_inputs[eid], ents_with_outputs[eid]
+		local hasinputs, hasoutputs = rawget(ents_with_inputs, eid), rawget(ents_with_outputs, eid)
+
 		if hasinputs or hasoutputs then
-			ents_with_inputs[eid] = nil
-			ents_with_outputs[eid] = nil
+			rawset(ents_with_inputs, eid, nil)
+			rawset(ents_with_outputs, eid, nil)
+
 			if not DontSend then
 				net.Start("wire_ports")
 					net.WriteInt(-3, 8) -- set eid
@@ -511,15 +571,18 @@ if SERVER then
 		local queue = lqueue or queue
 		local eid = ent:EntIndex()
 
-		if not ents_with_inputs[eid] then ents_with_inputs[eid] = {} end
+		if not rawget(ents_with_inputs, eid) then rawset(ents_with_inputs, eid, {}) end
 
 		queue[#queue+1] = { eid, DELETE, INPUT }
 
 		for Name, CurPort in pairs_sortvalues(ent.Inputs, WireLib.PortComparator) do
 			local entry = { Name, CurPort.Type, CurPort.Desc or "" }
+
 			ents_with_inputs[eid][#ents_with_inputs[eid]+1] = entry
-			queue[#queue+1] = { eid, PORT, INPUT, entry, CurPort.Num }
+
+			rawset(queue, #queue + 1, { eid, PORT, INPUT, entry, CurPort.Num })
 		end
+
 		for _, CurPort in pairs_sortvalues(ent.Inputs, WireLib.PortComparator) do
 			WireLib._SetLink(CurPort, lqueue)
 		end
@@ -535,33 +598,37 @@ if SERVER then
 
 		for Name, CurPort in pairs_sortvalues(ent.Outputs, WireLib.PortComparator) do
 			local entry = { Name, CurPort.Type, CurPort.Desc or "" }
+
 			ents_with_outputs[eid][#ents_with_outputs[eid]+1] = entry
-			queue[#queue+1] = { eid, PORT, OUTPUT, entry, CurPort.Num }
+
+			rawset(queue, #queue + 1, { eid, PORT, OUTPUT, entry, CurPort.Num })
 		end
 	end
 
 	function WireLib._SetLink(input, lqueue)
-		local ent = input.Entity
-		local num = input.Num
-		local state = input.SrcId and true or false
+		local ent = rawget(input, "Entity")
+		local num = rawget(input, "Num")
+		local state = rawget(input, "SrcId") and true or false
 
 		local queue = lqueue or queue
 		local eid = ent:EntIndex()
 
-		queue[#queue+1] = {eid, LINK, num, state}
+		rawset(queue, #queue + 1, {eid, LINK, num, state})
 	end
 
 	local eid = 0
 	local numports, firstportnum, portstrings = {}, {}, {}
 	local function writeCurrentStrings()
 		-- Write the current (input or output) string information
-		for IO=OUTPUT,INPUT,2 do -- so, k= -1 and k= 1
-			if numports[IO] then
+		for IO = OUTPUT, INPUT, 2 do -- so, k= -1 and k= 1
+		    local numportsIO = rawget(numports, IO)
+
+			if numportsIO then
 				net.WriteInt(firstportnum[IO], 8)	-- Control code for inputs/outputs is also the offset (the first port number we're writing over)
-				net.WriteUInt(numports[IO], 8)		-- Send number of ports
+				net.WriteUInt(numportsIO, 8)		-- Send number of ports
 				net.WriteBit(IO==OUTPUT)
-				for i=1,numports[IO]*3 do net.WriteString(portstrings[IO][i] or "") end
-				numports[IO] = nil
+				for i=1,numportsIO*3 do net.WriteString(rawget(rawget(portstrings, IO), i) or "") end
+				rawset(numports, IO, nil)
 			end
 		end
 	end
@@ -569,31 +636,41 @@ if SERVER then
 		-- First write a signed int for the command code
 		-- Then sometimes write extra data specific to the command (type varies)
 
-		if msg[1] ~= eid then
-			eid = msg[1]
+		local msg1 = rawget(msg, 1)
+		if msg1 ~= eid then
+			eid = msg1
 			writeCurrentStrings() -- We're switching to talking about a different entity, lets send port information
 			net.WriteInt(-3,8)
 			net.WriteUInt(eid,16)
 		end
 
-		local msgtype = msg[2]
+		local msgtype = rawget(msg, 2)
+		local msg3 = rawget(msg, 3)
 
 		if msgtype == DELETE then
-			numports[msg[3]] = nil
-			net.WriteInt(msg[3] == INPUT and -1 or -2, 8)
+			rawset(numports, msg3, nil)
+			net.WriteInt(msg3 == INPUT and -1 or -2, 8)
 		elseif msgtype == PORT then
 			local _,_,IO,entry,num = unpack(msg)
 
-			if not numports[IO] then
-				firstportnum[IO] = num
-				numports[IO] = 0
-				portstrings[IO] = {}
+			local numportsIO = rawget(numports, IO)
+
+			if not numportsIO then
+				rawset(firstportnum, IO, num)
+				rawset(portstrings, IO, {})
+
+				rawset(numports, IO, 0)
+				numportsIO = 0
 			end
-			local i = numports[IO]*3
-			portstrings[IO][i+1] = entry[1]
-			portstrings[IO][i+2] = entry[2]
-			portstrings[IO][i+3] = entry[3]
-			numports[IO] = numports[IO]+1
+
+			local i = numportsIO * 3
+
+			portstrings[IO][i+1] = rawget(entry, 1)
+			portstrings[IO][i+2] = rawget(entry, 2)
+			portstrings[IO][i+3] = rawget(entry, 3)
+
+			rawset(numports, IO, numportsIO + 1)
+
 		elseif msgtype == LINK then
 			local _,_,num,state = unpack(msg)
 			net.WriteInt(-4, 8)
@@ -608,9 +685,12 @@ if SERVER then
 		numports = {}
 
 		net.Start("wire_ports")
-		for i=1,#lqueue do
-			writemsg(lqueue[i])
+
+		local lqueueCount = #lqueue
+		for i = 1, lqueueCount do
+			writemsg(rawget(lqueue, i))
 		end
+
 		writeCurrentStrings()
 		net.WriteInt(0,8)
 		if ply then net.Send(ply) else net.Broadcast() end
@@ -624,12 +704,15 @@ if SERVER then
 
 	hook.Add("PlayerInitialSpawn", "wire_ports", function(ply)
 		local lqueue = {}
+
 		for eid, _ in pairs(ents_with_inputs) do
 			WireLib._SetInputs(Entity(eid), lqueue)
 		end
+
 		for eid, _ in pairs(ents_with_outputs) do
 			WireLib._SetOutputs(Entity(eid), lqueue)
 		end
+
 		FlushQueue(lqueue, ply)
 	end)
 
@@ -645,46 +728,50 @@ elseif CLIENT then
 			if cmd == 0 then
 				break
 			elseif cmd == -1 then
-				ents_with_inputs[eid] = nil
+				rawset(ents_with_inputs, eid, nil)
 			elseif cmd == -2 then
-				ents_with_outputs[eid] = nil
+			    rawset(ents_with_outputs, eid, nil)
 			elseif cmd == -3 then
 				eid = net.ReadUInt(16)
 			elseif cmd == -4 then
-				connections[#connections+1] = {eid, net.ReadUInt(8), net.ReadBit() ~= 0} -- Delay this process till after the loop
+				rawset(connections, #connections + 1, {eid, net.ReadUInt(8), net.ReadBit() ~= 0}) -- Delay this process till after the loop
 			elseif cmd > 0 then
 				local entry
 
 				local amount = net.ReadUInt(8)
 				if net.ReadBit() ~= 0 then
 					-- outputs
-					entry = ents_with_outputs[eid]
+					entry = rawget(ents_with_outputs, eid)
 					if not entry then
 						entry = {}
-						ents_with_outputs[eid] = entry
+						rawset(ents_with_outputs, eid, entry)
 					end
 				else
 					-- inputs
-					entry = ents_with_inputs[eid]
+					entry = rawget(ents_with_inputs, eid)
 					if not entry then
 						entry = {}
-						ents_with_inputs[eid] = entry
+						rawset(ents_with_inputs, eid, entry)
 					end
 				end
 
 				local endindex = cmd+amount-1
-				for i = cmd,endindex do
-					entry[i] = {net.ReadString(), net.ReadString(), net.ReadString()}
+				for i = cmd, endindex do
+					rawset(entry, i, {net.ReadString(), net.ReadString(), net.ReadString()})
 				end
 			end
 		end
-		for i=1, #connections do
-			local eid, num, state = unpack(connections[i])
-			local entry = ents_with_inputs[eid]
+
+		local connectionCount = #connections
+
+		for i = 1, connectionCount do
+		    local connection = rawget(connections, i)
+			local eid, num, state = unpack(connection)
+			local entry = rawget(ents_with_inputs, eid)
 			if not entry then
 				entry = {}
-				ents_with_inputs[eid] = entry
-			elseif entry[num] then
+				rawset(ents_with_inputs, eid, entry)
+			elseif rawget(entry, num) then
 				entry[num][4] = state
 			end
 		end
@@ -692,19 +779,22 @@ elseif CLIENT then
 
 	function WireLib.GetPorts(ent)
 		local eid = ent:EntIndex()
-		return ents_with_inputs[eid], ents_with_outputs[eid]
+		return rawget(ents_with_inputs, eid), rawget(ents_with_outputs, eid)
 	end
 
 	function WireLib._RemoveWire(eid) -- To remove the inputs without to remove the entity.
-		ents_with_inputs[eid] = nil
-		ents_with_outputs[eid] = nil
+		rawset(ents_with_inputs, eid, nil)
+		rawset(ents_with_outputs, eid, nil)
 	end
 
+	local COLOR_WHITE = Color( 255, 255, 255, 255 )
 	local flag = false
 	function WireLib.TestPorts()
 		flag = not flag
+
 		if flag then
 			local lasteid = 0
+
 			hook.Add("HUDPaint", "wire_ports_test", function()
 				local ent = LocalPlayer():GetEyeTraceNoCursor().Entity
 				--if not ent:IsValid() then return end
@@ -712,16 +802,19 @@ elseif CLIENT then
 				lasteid = eid
 
 				local text = "ID "..eid.."\nInputs:\n"
-				for _,name,tp,desc,connected in ipairs_map(ents_with_inputs[eid] or {}, unpack) do
+
+				for _,name,tp,desc,connected in ipairs_map(rawget(ents_with_inputs, eid) or {}, unpack) do
 
 					text = text..(connected and "-" or " ")
 					text = text..string.format("%s (%s) [%s]\n", name, tp, desc)
 				end
+
 				text = text.."\nOutputs:\n"
-				for _,name,tp,desc in ipairs_map(ents_with_outputs[eid] or {}, unpack) do
-					text = text..string.format("%s (%s) [%s]\n", name, tp, desc)
+				for _,name,tp,desc in ipairs_map(rawget(ents_with_outputs, eid) or {}, unpack) do
+					text = text..stringFormat("%s (%s) [%s]\n", name, tp, desc)
 				end
-				draw.DrawText(text,"Trebuchet24",10,300,Color(255,255,255,255),0)
+
+				draw.DrawText(text,"Trebuchet24",10,300,COLOR_WHITE,0)
 			end)
 		else
 			hook.Remove("HUDPaint", "wire_ports_test")
@@ -747,10 +840,12 @@ else
 		local Controller = net.ReadEntity()
 		if IsValid(Controller) then
 			Controller.Marks = {}
-			for _=1, net.ReadUInt(16) do
+			local length = net.ReadUInt(16)
+
+			for _ = 1, length do
 				local link = net.ReadEntity()
 				if IsValid(link) then
-					table.insert(Controller.Marks, link)
+					tableInsert(Controller.Marks, link)
 				end
 			end
 		end
@@ -769,16 +864,29 @@ end
 ]]
 function WireLib.levenshtein( s, t )
 	local d, sn, tn = {}, #s, #t
-	local byte, min = string.byte, math.min
-	for i = 0, sn do d[i * tn] = i end
-	for j = 0, tn do d[j] = j end
+	local byte, min = stringByte, mathMin
+	for i = 0, sn do rawset(d, i * tn, i) end
+	for j = 0, tn do rawset(d, j, j) end
+
+	local lastI = 0
 	for i = 1, sn do
 		local si = byte(s, i)
+        local iTimesTn = i * tn 
+
 		for j = 1, tn do
-			d[i*tn+j] = min(d[(i-1)*tn+j]+1, d[i*tn+j-1]+1, d[(i-1)*tn+j-1]+(si == byte(t,j) and 0 or 1))
+		    local lastITimesTnPlusJ = lastI * tn + j
+
+			d[i*tn+j] = min(
+			    rawget(d, lastITimesTnPlusJ ) + 1,
+			    rawget(d, iTimesTn + j - 1) + 1,
+			    rawget(d, lastITimesTnPlusJ - 1) + (si == byte(t,j) and 0 or 1)
+			)
 		end
+
+		lastI = i
 	end
-	return d[#d]
+
+	return rawget(d, #d)
 end
 
 --[[
@@ -873,18 +981,20 @@ function nicenumber.info( n, steps )
 
 	local displayones = true
 	local cursteps = 0
+	local numberCount = #numbers
 
-	for i = 1, #numbers do
-		local zeroes = numbers[i].zeroes
+	for i = 1, numberCount do
+	    local numberI = rawget(numbers, i)
+		local zeroes = rawget(numberI, zeroes)
 
 		local nn = floor(n / zeroes)
 		if nn > 0 then
 			cursteps = cursteps + 1
 			if cursteps > steps then break end
 
-			t[#t+1] = setmetatable({value = nn},{__index = numbers[i]})
+			t[#t+1] = setmetatable({value = nn},{__index = numberI})
 
-			n = n % numbers[i].zeroes
+			n = n % zeroes
 
 			displayones = false
 		end
@@ -903,13 +1013,16 @@ local sub = string.sub
 -- example 12B 34M
 function nicenumber.format( n, steps )
 	local t = nicenumber.info( n, steps )
+	local tCount = #t
 
 	steps = steps or #numbers
 
 	local str = ""
-	for i=1,#t do
+	for i = 1, tCount do
 		if i > steps then break end
-		str = str .. t[i].value .. t[i].symbol .. " "
+	    local tI = rawget(t, i)
+
+		str = str .. tI.value .. tI.symbol .. " "
 	end
 
 	return sub( str, 1, -2 ) -- remove trailing space
@@ -923,7 +1036,7 @@ function nicenumber.formatDecimal( n, decimals )
 
 	decimals = decimals or 2
 
-	local largest = t[1]
+	local largest = rawget(t, 1)
 	if largest then
 		n = n / largest.zeroes
 		return round( n, decimals ) .. largest.symbol
@@ -945,15 +1058,18 @@ local times = {
 	{ "s", 1 }, -- seconds
 }
 function nicenumber.nicetime( n )
-	n = math.abs( n )
+	n = mathAbs( n )
 
 	if n == 0 then return "0s" end
 
+	local timesCount = #times
 	local prev_name = ""
 	local prev_val = 0
-	for i=1,#times do
-		local name = times[i][1]
-		local num = times[i][2]
+
+	for i = 1, timesCount do
+	    local timeI = rawget(times, i)
+		local name = rawget(timeI, 1)
+		local num = rawget(timeI, 2)
 
 		local temp = floor(n / num)
 		if temp > 0 or prev_name ~= "" then
@@ -998,8 +1114,11 @@ end
 
 local huge, abs = math.huge, math.abs
 function WireLib.setAng(ent, ang)
-	if isnan(ang.pitch) or isnan(ang.yaw) or isnan(ang.roll) then return end
-	if abs(ang.pitch) == huge or abs(ang.yaw) == huge or abs(ang.roll) == huge then return false end -- SetAngles'ing inf crashes the server
+    local angPitch = ang.pitch
+    local angYaw = ang.yaw
+    local angRoll = ang.roll
+	if isnan(angPitch) or isnan(angYaw) or isnan(angRoll) then return end
+	if abs(angPitch) == huge or abs(angYaw) == huge or abs(angRoll) == huge then return false end -- SetAngles'ing inf crashes the server
 
 	ang = Angle(ang)
 	ang:Normalize()
@@ -1022,10 +1141,15 @@ end)
 
 -- Nan never equals itself, so if the value doesn't equal itself replace it with 0.
 function WireLib.clampForce( v )
-	v = Vector(v[1], v[2], v[3])
-	v[1] = v[1] == v[1] and math.Clamp( v[1], min_force, max_force ) or 0
-	v[2] = v[2] == v[2] and math.Clamp( v[2], min_force, max_force ) or 0
-	v[3] = v[3] == v[3] and math.Clamp( v[3], min_force, max_force ) or 0
+    local v1 = v[1]
+    local v2 = v[2]
+    local v3 = v[3]
+
+	v = Vector(v1, v2, v3)
+	v[1] = v1 == v1 and mathClamp( v1, min_force, max_force ) or 0
+	v[2] = v2 == v2 and mathClamp( v2, min_force, max_force ) or 0
+	v[3] = v3 == v3 and mathClamp( v3, min_force, max_force ) or 0
+
 	return v
 end
 
@@ -1053,7 +1177,7 @@ local valid_vehicles = {
 	prop_vehicle_prisoner_pod = true
 }
 local function IsRealVehicle(pod)
-	return valid_vehicles[pod:GetClass()]
+	return rawget(valid_vehicles, pod:GetClass())
 end
 
 -- GetClosestRealVehicle
@@ -1070,20 +1194,21 @@ function WireLib.GetClosestRealVehicle(vehicle,position,notify_this_player)
 		-- get all "real" vehicles in the contraption and calculate distance
 		local contraption = constraint.GetAllConstrainedEntities(vehicle)
 		local vehicles = {}
+
 		for _, ent in pairs( contraption ) do
 			if IsRealVehicle(ent) then
-				vehicles[#vehicles+1] = {
+				rawset(vehicles, #vehicles+1, {
 					distance = position:Distance(ent:GetPos()),
 					entity = ent
-				}
+				})
 			end
 		end
 
 		if #vehicles > 0 then
 			-- sort them by distance
-			table.sort(vehicles,function(a,b) return a.distance < b.distance end)
+			tableSort(vehicles,function(a,b) return rawget(a, "distance") < rawget(b, "distance") end)
 			-- get closest
-			vehicle = vehicles[1].entity
+			vehicle = rawget(rawget(vehicles, 1), "entity")
 
 			-- notify the owner of the change
 			if IsValid(notify_this_player) and notify_this_player:IsPlayer() then
@@ -1151,10 +1276,10 @@ do
 			for button = BUTTON_CODE_NONE, BUTTON_CODE_LAST do
 				local binding = input.LookupKeyBinding(button)
 				if binding ~= nil then
-					if string.sub(binding, 1, 1) == "+" then binding = string.sub(binding, 2) end
+					if stringSub(binding, 1, 1) == "+" then binding = string.sub(binding, 2) end
 					local bindingIndex = interestingBindsLookup[binding]
 					if bindingIndex ~= nil then
-						table.insert(data, { Button = button, BindingIndex = bindingIndex })
+						tableInsert(data, { Button = button, BindingIndex = bindingIndex })
 					end
 				end
 			end
@@ -1173,40 +1298,48 @@ do
 		end)
 	elseif SERVER then
 		util.AddNetworkString(MESSAGE_NAME)
-		net.Receive(MESSAGE_NAME, function(_, player)
-			player.SyncedBindings = {}
+		net.Receive(MESSAGE_NAME, function(_, ply)
+			ply.SyncedBindings = {}
 			local count = net.ReadUInt(8)
 			for _ = 1, count do
 				local button = net.ReadUInt(16)
 				local bindingIndex = net.ReadUInt(5)
 				if button > BUTTON_CODE_NONE and button <= BUTTON_CODE_LAST then
 					local binding = interestingBinds[bindingIndex]
-					player.SyncedBindings[button] = binding
+					rawset(ply.SyncedBindings, button, binding)
 				end
 			end
 		end)
 
-		hook.Add("PlayerButtonDown", MESSAGE_NAME, function(player, button)
-			if not player.SyncedBindings then return end
-			local binding = player.SyncedBindings[button]
-			hook.Run("PlayerBindDown", player, binding, button)
+		hook.Add("PlayerButtonDown", MESSAGE_NAME, function(ply, button)
+		    local syncedBindings = ply.SyncedBindings
+
+			if not syncedBindings then return end
+			local binding = rawget(syncedBindings, button)
+			hook.Run("PlayerBindDown", ply, binding, button)
 		end)
 
-		hook.Add("PlayerButtonUp", MESSAGE_NAME, function(player, button)
-			if not player.SyncedBindings then return end
-			local binding = player.SyncedBindings[button]
-			hook.Run("PlayerBindUp", player, binding, button)
+		hook.Add("PlayerButtonUp", MESSAGE_NAME, function(ply, button)
+		    local syncedBindings = ply.SyncedBindings
+			if not syncedBindings then return end
+			local binding = rawget(syncedBindings, button)
+
+			hook.Run("PlayerBindUp", ply, binding, button)
 		end)
 
-		hook.Add("StartCommand", MESSAGE_NAME, function(player, command)
-			if not player.SyncedBindings then return end
+		hook.Add("StartCommand", MESSAGE_NAME, function(ply, command)
+		    local syncedBindings = ply.SyncedBindings
+			if not syncedBindings then return end
+
 			local wheel = command:GetMouseWheel()
 			if wheel == 0 then return end
+
 			local button = wheel > 0 and MOUSE_WHEEL_UP or MOUSE_WHEEL_DOWN
-			local binding = player.SyncedBindings[button]
+			local binding = rawget(syncedBindings, button)
 			if not binding then return end
-			hook.Run("PlayerBindDown", player, binding, button)
-			hook.Run("PlayerBindUp", player, binding, button)
+
+			hook.Run("PlayerBindDown", ply, binding, button)
+			hook.Run("PlayerBindUp", ply, binding, button)
 		end)
 	end
 end
@@ -1221,7 +1354,7 @@ function WireLib.RegisterPlayerTable(tbl)
 end
 
 hook.Add("PlayerDisconnected", "WireLib_PlayerDisconnect", function(ply)
-  for _,tbl in pairs(WireLib.PlayerTables) do
-    tbl[ply] = nil
+  for _,tbl in pairs(rawset(WireLib, "PlayerTables")) do
+    rawset(tbl, ply, nil)
   end
 end)

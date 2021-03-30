@@ -96,9 +96,9 @@ end
 
 function Parser:Error(message, token)
 	if token then
-		error(message .. " at line " .. token[4] .. ", char " .. token[5], 0)
+		error("[ERROR] " .. message .. " at line " .. token[4] .. ", char " .. token[5], 0)
 	else
-		error(message .. " at line " .. self.token[4] .. ", char " .. self.token[5], 0)
+		error("[ERROR] " .. message .. " at line " .. self.token[4] .. ", char " .. self.token[5], 0)
 	end
 end
 
