@@ -7,6 +7,10 @@ local gvars = {}
 gvars.shared = {}
 gvars.safe = {} -- Safe from hacking using gTableSafe
 
+local istable = istable
+local rawget = rawget
+local rawset = rawset
+
 ------------------------------------------------------------------------------------------------
 -- GVARS V2
 ------------------------------------------------------------------------------------------------
@@ -17,37 +21,39 @@ registerType( "gtable", "xgt", {},
 	function(self) self.entity:Error("You may not input a gtable.") end,
 	function(self) self.entity:Error("You may not output a gtable.") end,
 	function(retval)
-		if !istable(retval) then error("Return value is not a gtable, but a "..type(retval).."!",0) end
+		if not istable(retval) then error("Return value is not a gtable, but a "..type(retval).."!",0) end
 	end,
 	function(v)
-		return !istable(v)
+		return not istable(v)
 	end
 )
 
 __e2setcost(1)
 
 registerOperator("ass", "xgt", "xgt", function(self, args)
-	local lhs, op2, scope = args[2], args[3], args[4]
-	local      rhs = op2[1](self, op2)
+	local _, lhs, op2, scope = unpack( args )
+	local      rhs = rawget( op2, 1 )(self, op2)
 
-	local Scope = self.Scopes[scope]
-	if !Scope.lookup then Scope.lookup = {} end
-	local lookup = Scope.lookup
+	local Scope = rawget( self.Scopes, scope )
+	local lookup = rawget( Scope, "lookup" )
+	if not lookup then
+	    lookup = {}
+    end
 
 	-- remove old lookup entry
-	if lookup[rhs] then lookup[rhs][lhs] = nil end
+	if rawget( lookup, rhs ) then rawset( rawget( lookup, rhs ), lhs, nil ) end
 
 	-- add new lookup entry
-	local lookup_entry = lookup[rhs]
+	local lookup_entry = rawget( lookup, rhs )
 	if not lookup_entry then
 		lookup_entry = {}
-		lookup[rhs] = lookup_entry
+		rawset( lookup, rhs, lookup_entry )
 	end
-	lookup_entry[lhs] = true
+	rawset( lookup_entry, lhs, true )
 
 	--Scope.vars[lhs] = rhs
-	Scope[lhs] = rhs
-	Scope.vclk[lhs] = true
+	rawset( Scope, lhs, rhs )
+	rawset( rawget( Scope, "vclk" ), lhs, true )
 	return rhs
 end)
 

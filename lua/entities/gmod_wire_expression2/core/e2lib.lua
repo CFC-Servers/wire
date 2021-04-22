@@ -2,6 +2,21 @@ AddCSLuaFile()
 
 E2Lib = {}
 
+local rawget = rawget
+local rawset = rawset
+local unpack = unpack
+local istable = istable
+
+local tableInsert = table.insert
+local tableRemove = table.remove
+local IsValid = IsValid
+
+local stringSub = string.sub
+
+local mathClamp = math.Clamp
+
+local MOVETYPE_VPHYSICS = MOVETYPE_VPHYSICS
+
 local type = type
 local function checkargtype(argn, value, argtype)
 	if type(value) ~= argtype then error(string.format("bad argument #%d to 'E2Lib.%s' (%s expected, got %s)", argn, debug.getinfo(2, "n").name, argtype, type(value)), 2) end
@@ -14,9 +29,13 @@ local IsValid = IsValid
 -- This functions should not be used in functions that tend to be used very often, as it is slower than getting the arguments manually.
 function E2Lib.getArguments(self, args)
 	local ret = {}
-	for i = 2, #args[7] + 1 do
-		ret[i - 1] = args[i][1](self, args[i])
+	local args7Len = #args[7] + 1
+
+	for i = 2, args7Len do
+	    local argsi = rawget( args, i )
+		rawset( ret, i - 1, rawget( argsi, 1 )(self, argsi) )
 	end
+
 	return unpack(ret)
 end
 
@@ -33,7 +52,7 @@ function E2Lib.setMaterial(ent, material)
 end
 
 function E2Lib.setSubMaterial(ent, index, material)
-	index = math.Clamp(index, 0, 255)
+	index = mathClamp(index, 0, 255)
 	material = WireLib.IsValidMaterial(material)
 	ent:SetSubMaterial(index, material)
 	duplicator.StoreEntityModifier(ent, "submaterial", { ["SubMaterialOverride_"..index] = material })
@@ -45,7 +64,6 @@ function E2Lib.newE2Table()
 end
 
 -- Returns a cloned table of the variable given if it is a table.
-local istable = istable
 local table_Copy = table.Copy
 function E2Lib.fixDefault(var)
 	return istable(var) and table_Copy(var) or var
@@ -83,26 +101,28 @@ function E2Lib.typeName(typeid)
 	if typeid == "" then return "void" end
 	if typeid == "n" then return "number" end
 
-	local tp = wire_expression_types2[typeid]
+	local tp = rawget( wire_expression_types2, typeid )
 	if not tp then error("Type ID '" .. typeid .. "' not found", 2) end
 
-	local typename = tp[1]:lower()
+	local typename = rawget( tp, 1 ):lower()
 	return typename or "unknown"
 end
 
 function E2Lib.splitType(args)
+    local argsLen = #args
+
 	local ret = {}
 	local thistype
 	local i = 1
-	while i <= #args do
+	while i <= argsLen do
 		local letter = args:sub(i, i)
 		if letter == ":" then
 			if #ret ~= 1 then error("Misplaced ':' in args", 2) end
-			thistype = ret[1]
+			thistype = rawget( ret, 1 )
 			ret = {}
 		elseif letter == "." then
 			if args:sub(i) ~= "..." then error("Misplaced '.' in args", 2) end
-			table.insert(ret, "...")
+			tableInsert(ret, "...")
 			i = i + 2
 		elseif letter == "=" then
 			if #ret ~= 1 then error("Misplaced '=' in args", 2) end
@@ -113,7 +133,7 @@ function E2Lib.splitType(args)
 				typeid = args:sub(i, i + 2)
 				i = i + 2
 			end
-			table.insert(ret, E2Lib.typeName(typeid))
+			tableInsert(ret, E2Lib.typeName(typeid))
 		end
 		i = i + 1
 	end
@@ -171,14 +191,22 @@ function E2Lib.getOwner(self, entity)
 
 	local OnDieFunctions = entity.OnDieFunctions
 	if OnDieFunctions then
-		if OnDieFunctions.GetCountUpdate then
-			if OnDieFunctions.GetCountUpdate.Args then
-				if OnDieFunctions.GetCountUpdate.Args[1] then return OnDieFunctions.GetCountUpdate.Args[1] end
+	    local countUpdate = rawget( OnDieFunctions, "GetCountUpdate" )
+		if countUpdate then
+		    local countUpdateArgs = rawget( countUpdate, "Args" )
+
+			if countUpdateArgs then
+			    local firstArg = rawget( countUpdateArgs, 1 )
+				if firstArg then return firstArg end
 			end
 		end
-		if OnDieFunctions.undo1 then
-			if OnDieFunctions.undo1.Args then
-				if OnDieFunctions.undo1.Args[2] then return OnDieFunctions.undo1.Args[2] end
+
+		local onDieUndo1 = rawget( OnDieFunctions, "undo1" )
+		if onDieUndo1 then
+		    local undoArgs = rawget( onDieUndo1, "Args" )
+			if undoArgs then
+			    local secondArg = rawget( undoArgs, 2 )
+			    if secondArg then return secondArg end
 			end
 		end
 	end
@@ -242,17 +270,21 @@ local table_length_lookup = {
 
 function E2Lib.guess_type(value)
 	local vtype = type(value)
-	if type_lookup[vtype] then return type_lookup[vtype] end
+
+	local lookupType = rawget( type_lookup, vtype )
+	if lookupType then return lookupType end
 	if IsValid(value) then return "e" end
 	if value.EntIndex then return "e" end
 	if vtype == "table" then
-		if table_length_lookup[#value] then return table_length_lookup[#value] end
+	    local lengthLookup = rawget( table_length_lookup, #value )
+	    if lengthLookup then return lengthLookup end
 		if value.HitPos then return "xrd" end
 	end
 
 	for typeid, v in pairs(wire_expression_types2) do
-		if v[5] then
-			local ok = pcall(v[5], value)
+	    local v5 = rawget( v, 5 )
+		if v5 then
+			local ok = pcall(v5, value)
 			if ok then return typeid end
 		end
 	end
@@ -277,10 +309,10 @@ function E2Lib.filterList(list, criterion)
 	-- print("-- filterList: "..#list.." entries --")
 
 	while index <= #list do
-		if not criterion(list[index]) then
+		if not criterion(rawget( list, index )) then
 			-- MsgC(Color(128,128,128), "-    "..tostring(list[index]).."\n")
-			list[index] = list[#list]
-			table.remove(list)
+			rawset( list, index, rawget( list, #list ) )
+			tableRemove(list)
 		else
 			-- print(string.format("+%3d %s", index, tostring(list[index])))
 			index = index + 1
@@ -354,20 +386,23 @@ for token, op in pairs(E2Lib.optable_inv) do
 	local current = E2Lib.optable
 	for i = 1, #op do
 		local c = op:sub(i, i)
-		local nxt = current[c]
+		local nxt = rawget( current, c )
 		if not nxt then
 			nxt = {}
-			current[c] = nxt
+			rawset( current, c, nxt )
 		end
 
 		if i == #op then
-			nxt[1] = token
+			rawset( nxt, 1, token )
 		else
-			if not nxt[2] then
-				nxt[2] = {}
+		    local nxt2 = rawget( nxt, 2 )
+			if not next2 then
+			    local new = {}
+				rawset( nxt, 2, new )
+				nxt2 = new
 			end
 
-			current = nxt[2]
+			current = nxt2
 		end
 	end
 end
@@ -395,7 +430,7 @@ function E2Lib.limitString(text, length)
 	if #text <= length then
 		return text
 	else
-		return string.sub(text, 1, length) .. "..."
+		return stringSub(text, 1, length) .. "..."
 	end
 end
 

@@ -2,19 +2,34 @@
 --  Core language support
 --------------------------------------------------------------------------------
 
+local istable = istable
+local isentity = isentity
+local tableCopy = table.Copy
+local error = error
+local rawget = rawget
+local rawset = rawset
+local pcall = pcall
+local pairs = pairs
+local unpack = unpack
+local IsValid = IsValid
+
+local mathFloor = math.floor
+local mathClamp = math.Clamp
+
 local delta = wire_expression2_delta
 
 __e2setcost(1) -- approximation
 
 registerOperator("dat", "", "", function(self, args)
-	return istable(args[2]) and table.Copy(args[2]) or args[2]
+    local args2 = rawget( args, 2 )
+	return istable(args2) and tableCopy(args2) or args2
 end)
 
 __e2setcost(2) -- approximation
 
 registerOperator("var", "", "", function(self, args)
-	local op1, scope = args[2], args[3]
-	local val = self.Scopes[scope][op1]
+	local op1, scope = rawget(args, 2), rawget(args, 3)
+	local val = rawget(rawget(self.Scopes, scope), op1)
 	return val
 end)
 
@@ -23,19 +38,19 @@ end)
 __e2setcost(0)
 
 registerOperator("seq", "", "", function(self, args)
-	self.prf = self.prf + args[2]
+	self.prf = self.prf + rawget( args, 2 )
 	if self.prf > e2_tickquota then error("perf", 0) end
 
 	local n = #args
 	if n == 2 then return end
 
 	for i=3,n-1 do
-		local op = args[i]
-		op[1](self, op)
+		local op = rawget( args, i )
+		rawget( op, 1 )(self, op)
 	end
 
-	local op = args[n]
-	return op[1](self, op)
+	local op = rawget( args, n )
+	return rawget( op, 1 )(self, op)
 end)
 
 --------------------------------------------------------------------------------
@@ -60,16 +75,16 @@ registerOperator("whl", "", "", function(self, args)
 end)
 
 registerOperator("for", "", "", function(self, args)
-	local var, op1, op2, op3, op4 = args[2], args[3], args[4], args[5], args[6]
+	local _, var, op1, op2, op3, op4 = unpack( args )
 
 	local rstart, rend, rstep
-	rstart = op1[1](self, op1)
-	rend = op2[1](self, op2)
+	rstart = rawget( op1, 1 )(self, op1)
+	rend = rawget( op2, 1 )(self, op2)
 	local rdiff = rend - rstart
 	local rdelta = delta
 
 	if op3 then
-		rstep = op3[1](self, op3)
+		rstep = rawget( op3, 1 )(self, op3)
 
 		if rdiff > -delta then
 			if rstep < delta and rstep > -delta then return end
@@ -93,8 +108,8 @@ registerOperator("for", "", "", function(self, args)
 	self.prf = self.prf + 3
 	for I=rstart,rend+rdelta,rstep do
 		self:PushScope()
-		self.Scope[var] = I
-		self.Scope.vclk[var] = true
+		rawset( self.Scope, var, I )
+		rawset( rawget( self.Scope, "vclk" ), var, true )
 
 		local ok, msg = pcall(op4[1], self, op4)
 		if not ok then
@@ -123,19 +138,19 @@ end)
 __e2setcost(3) -- approximation
 
 registerOperator("if", "n", "", function(self, args)
-	local op1 = args[3]
-	self.prf = self.prf + args[2]
+	local op1 = rawget( args, 3 )
+	self.prf = self.prf + rawget( args, 2 )
 
 	local ok, result
 
-	if op1[1](self, op1) ~= 0 then
+	if rawget( op1, 1 )(self, op1) ~= 0 then
 		self:PushScope()
-		local op2 = args[4]
-		ok, result = pcall(op2[1],self, op2)
+		local op2 = rawget( args, 4 )
+		ok, result = pcall(rawget( op2, 1 ),self, op2)
 	else
 		self:PushScope() -- for else statments, elseif staments will run the if opp again
-		local op3 = args[5]
-		ok, result = pcall(op3[1],self, op3)
+		local op3 = rawget( args, 5 )
+		ok, result = pcall(rawget( op3, 1 ),self, op3)
 	end
 
 	self:PopScope()
@@ -145,34 +160,34 @@ registerOperator("if", "n", "", function(self, args)
 end)
 
 registerOperator("def", "n", "", function(self, args)
-	local op1 = args[2]
-	local op2 = args[3]
-	local rv2 = op2[1](self, op2)
+    local _, op1, op2 = unpack( args )
+	local rv2 = rawget( op2, 1 )(self, op2)
 
 	-- sets the argument for the DAT-operator
-	op1[2][2] = rv2
-	local rv1 = op1[1](self, op1)
+	rawset( rawget( op1, 2 ), 2, rv2 )
+	local rv1 = rawget( op1, 1 )(self, op1)
 
 	if rv1 ~= 0 then
 		return rv2
 	else
-		self.prf = self.prf + args[5]
-		local op3 = args[4]
-		return op3[1](self, op3)
+		self.prf = self.prf + rawget( args, 5 )
+		local op3 = rawget( args, 4 )
+		return rawget( op3, 1 )(self, op3)
 	end
 end)
 
 registerOperator("cnd", "n", "", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget( args, 2 )
+	local rv1 = rawget( op1, 1 )(self, op1)
+
 	if rv1 ~= 0 then
-		self.prf = self.prf + args[5]
-		local op2 = args[3]
-		return op2[1](self, op2)
+		self.prf = self.prf + rawget( args, 5 )
+		local op2 = rawget( args, 3 )
+		return rawget( op2, 1 )(self, op2)
 	else
-		self.prf = self.prf + args[6]
-		local op3 = args[4]
-		return op3[1](self, op3)
+		self.prf = self.prf + rawget( args, 6 )
+		local op3 = rawget( args, 4 )
+		return rawget( op3, 1 )(self, op3)
 	end
 end)
 
@@ -204,36 +219,36 @@ end)
 __e2setcost(0) -- cascaded
 
 registerOperator("is", "n", "n", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget( args, 2 )
+	local rv1 = rawget( op1, 1 )(self, op1)
 	return rv1 ~= 0 and 1 or 0
 end)
 
 __e2setcost(1) -- approximation
 
 registerOperator("not", "n", "n", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget( args, 2 )
+	local rv1 = rawget( op1, 1 )(self, op1)
 	return rv1 == 0 and 1 or 0
 end)
 
 registerOperator("and", "nn", "n", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget( args, 2 )
+	local rv1 = rawget( op1, 1 )(self, op1)
 	if rv1 == 0 then return 0 end
 
-	local op2 = args[3]
-	local rv2 = op2[1](self, op2)
+	local op2 = rawget( args, 3 )
+	local rv2 = rawget( op2, 1 )(self, op2)
 	return rv2 ~= 0 and 1 or 0
 end)
 
 registerOperator("or", "nn", "n", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget( args, 2 )
+	local rv1 = rawget( op1, 1 )(self, op1)
 	if rv1 ~= 0 then return 1 end
 
-	local op2 = args[3]
-	local rv2 = op2[1](self, op2)
+	local op2 = rawget( args, 3 )
+	local rv2 = rawget( op2, 1 )(self, op2)
 	return rv2 ~= 0 and 1 or 0
 end)
 
@@ -242,11 +257,11 @@ end)
 __e2setcost(1) -- approximation
 
 e2function number first()
-	return self.entity.first and 1 or 0
+	return rawget( self.entity, "first" ) and 1 or 0
 end
 
 e2function number duped()
-	return self.entity.duped and 1 or 0
+	return rawget( self.entity, "duped" ) and 1 or 0
 end
 
 e2function number inputClk()
@@ -281,7 +296,7 @@ end
 -- Made by Divran
 
 local function dupefinished( TimedPasteData, TimedPasteDataCurrent )
-	for k,v in pairs( TimedPasteData[TimedPasteDataCurrent].CreatedEntities ) do
+	for k,v in pairs( rawget( rawget( TimedPasteData, TimedPasteDataCurrent ), "CreatedEntities" ) ) do
 		if (isentity(v) and v:IsValid() and v:GetClass() == "gmod_wire_expression2") then
 			v.dupefinished = true
 			v:Execute()
@@ -292,12 +307,12 @@ end
 hook.Add("AdvDupe_FinishPasting", "E2_dupefinished", dupefinished )
 
 e2function number dupefinished()
-	return self.entity.dupefinished and 1 or 0
+	return rawget( self.entity, "dupefinished" ) and 1 or 0
 end
 
 --- Returns 1 if this is the last() execution and caused by the entity being removed.
 e2function number removing()
-	return self.entity.removing and 1 or 0
+	return rawget( self.entity, "removing" ) and 1 or 0
 end
 
 --- If <activate> != 0, the chip will run once when it is removed, setting the last() flag when it does.
@@ -358,7 +373,6 @@ end)
 
 --------------------------------------------------------------------------------
 
-local floor  = math.floor
 local ceil   = math.ceil
 local round  = math.Round
 
@@ -370,7 +384,7 @@ end
 
 e2function number entity:ops()
 	if not IsValid(this) or this:GetClass() ~= "gmod_wire_expression2" or not this.context then return 0 end
-	return round(this.context.prfbench)
+	return round(rawget( this.context, "prfbench" ))
 end
 
 e2function number opcounter()
@@ -383,7 +397,7 @@ end
 
 e2function number entity:cpuUsage()
 	if not IsValid(this) or this:GetClass() ~= "gmod_wire_expression2" or not this.context then return 0 end
-	return this.context.timebench
+	return rawget( this.context, "timebench" )
 end
 
 --- If used as a while loop condition, stabilizes the expression around <maxexceed> hardquota used.
@@ -395,7 +409,7 @@ e2function number perf()
 end
 
 e2function number perf(number n)
-	n = math.Clamp(n, 0, 100)
+	n = mathClamp(n, 0, 100)
 	if self.prf >= e2_tickquota*n*0.01 then return 0 end
 	if self.prf + self.prfcount >= e2_hardquota * n * 0.01 then return 0 end
 	if n == 100 then
@@ -408,7 +422,7 @@ end
 
 e2function number minquota()
 	if self.prf < e2_softquota then
-		return floor(e2_softquota - self.prf)
+		return mathFloor(e2_softquota - self.prf)
 	else
 		return 0
 	end
@@ -420,9 +434,9 @@ e2function number maxquota()
 		local hardquota = e2_hardquota - self.prfcount - self.prf + e2_softquota
 
 		if hardquota < tickquota then
-			return floor(hardquota)
+			return mathFloor(hardquota)
 		else
-			return floor(tickquota)
+			return mathFloor(tickquota)
 		end
 	else
 		return 0
@@ -450,7 +464,7 @@ registerCallback("postinit", function()
 			local index = args[2]
 			index = index[1](self, index)
 
-			index = math.Clamp(math.floor(index), 1, #args-3)
+			index = mathClamp(mathFloor(index), 1, #args-3)
 
 			if index ~= 1 and args[#args][index+1] ~= id then return zero end
 			local value = args[index+2]
@@ -466,26 +480,27 @@ __e2setcost(3) -- approximation
 
 registerOperator("switch", "", "", function(self, args)
 	local cases, startcase = args[3], args[4]
+	local casesCount = #cases
 
 	self:PushScope()
 
-	for i=1, #cases do -- We figure out what we can run.
-		local case = cases[i]
-		local op1 = case[1]
+	for i=1, casesCount do -- We figure out what we can run.
+		local case = rawget( cases, i )
+		local op1 = rawget( case, 1 )
 
-		self.prf = self.prf + case[3]
+		self.prf = self.prf + rawget( case, 3 )
 		if self.prf > e2_tickquota then error("perf", 0) end
 
-		if (op1 and op1[1](self, op1) == 1) then -- Equals operator
+		if (op1 and rawget( op1, 1 )(self, op1) == 1) then -- Equals operator
 			startcase = i
 			break
 		end
 	end
 
 	if startcase then
-		for i=startcase, #cases do
-			local stmts = cases[i][2]
-			local ok, msg = pcall(stmts[1], self, stmts)
+		for i=startcase, casesCount do
+			local stmts = rawget( rawget( cases, i ), 2 )
+			local ok, msg = pcall(rawget( stmts, 1 ), self, stmts)
 			if not ok then
 				if msg == "break" then
 					break
