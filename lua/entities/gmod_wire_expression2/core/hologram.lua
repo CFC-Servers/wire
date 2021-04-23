@@ -1,5 +1,11 @@
 E2Lib.RegisterExtension( "holo", true, "Allows E2 to create and manipulate non-solid models." )
 
+local rawget = rawget
+local rawset = rawset
+
+local IsValid = IsValid
+local CanModel = WireLib.CanModel
+
 -- -----------------------------------------------------------------------------
 
 local function checkOwner(self)
@@ -147,17 +153,18 @@ end
 local function GetModel(self, model, skin)
 	skin = skin or 0
 
-	if ModelList[model] then
-		model = modelPath(ModelList[model])
+	local modelListModel = rawget( ModelList, model )
+	if modelListModel then
+		model = modelPath( modelListModel )
 
 	-- If this model isn't already the absolute path of a default model, and only default models are allowed
-	elseif not pathLookup[model] and wire_holograms_modelany:GetInt() == 0 then
+	elseif not rawget( pathLookup, model ) and wire_holograms_modelany:GetInt() == 0 then
 		return false
 	end
 
-	if wire_holograms_modelany:GetInt() ~= 2 and not WireLib.CanModel(self.player, model, skin) then
+	if wire_holograms_modelany:GetInt() ~= 2 and not CanModel(self.player, model, skin) then
 		-- Check if the model is at least valid
-		if not WireLib.CanModel(self.player, model, 0) then
+		if not CanModel(self.player, model, 0) then
 			return false
 		end
 
@@ -177,13 +184,16 @@ local vis_queue = {}
 local player_color_queue = {}
 
 local function add_queue( queue, ply, data )
-	local plyqueue = queue[ply]
+	local plyqueue = rawget( queue, ply )
 	if not plyqueue then
 		plyqueue = {}
-		queue[ply] = plyqueue
+		rawset( queue ply, plyqueue )
 	end
-	if #plyqueue==wire_holograms_max:GetInt() then return end
-	plyqueue[#plyqueue+1] = data
+
+	local plyqueueCount = #plyqueue
+	if plyqueueCount==wire_holograms_max:GetInt() then return end
+
+	rawset( plyqueue, plyqueueCount+1, data )
 end
 
 -- call to remove all queued items for a specific hologram

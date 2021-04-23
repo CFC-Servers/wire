@@ -8,6 +8,9 @@ AddCSLuaFile()
 wire_expression2_delta = 0.0000001000000
 delta = wire_expression2_delta
 
+local stringSub = string.sub
+local stringFormat = string.format
+
 -- functions to type-check function return values.
 
 local wire_expression2_debug = CreateConVar("wire_expression2_debug", 0, 0)
@@ -94,7 +97,7 @@ function wire_expression2_reset_extensions()
 end
 
 local function isValidTypeId(id)
-	return #id == (string.sub(id, 1, 1) == "x" and 3 or 1)
+	return #id == (stringSub(id, 1, 1) == "x" and 3 or 1)
 end
 
 -- additional args: <input serializer>, <output serializer>, <type checker>
