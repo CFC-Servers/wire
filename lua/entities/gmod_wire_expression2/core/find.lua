@@ -1,11 +1,37 @@
 E2Lib.RegisterExtension("find", true, "Allows an E2 to search for entities matching a filter.")
 
-local function table_IsEmpty(t) return not next(t) end
+local rawget = rawget
+local next = next
+local CurTime = CurTime
+local IsValid = IsValid
+local NULL = NULL
+
+local stringLower = string.lower
+local stringMatch = string.match
+local stringFind = string.find
+local stringReplace = string.Replace
 
 local filterList = E2Lib.filterList
+local FindInSphere = ents.FindInSphere
+local FindInBox = ents.FindInBox
+local FindByName = FindByName
+local FindByModel = FindByModel
+local FindByClass = FindByClass
+
+local allPlayers = player.GetAll
+local GetBySteamID = player.GetBySteamID
+local GetBySteamID64 = player.GetBySteamID64
+
+local mathCos = math.cos
+local mathRad = math.rad
+local mathHuge = math.huge
+
+local tableSort = table.sort
+
+local function table_IsEmpty(t) return not next(t) end
 
 local function replace_match(a,b)
-	return string.match( string.Replace(a,"-","__"), string.Replace(b,"-","__") )
+	return stringMatch( stringReplace(a,"-","__"), stringReplace(b,"-","__") )
 end
 
 -- -- some generic filter criteria -- --
@@ -63,7 +89,7 @@ local forbidden_classes = {
 local function filter_default(self)
 	local chip = self.entity
 	return function(ent)
-		if forbidden_classes[ent:GetClass()] then return false end
+		if rawget( forbidden_classes, ent:GetClass() ) then return false end
 
 		if ent == chip then return false end
 		return true
@@ -84,7 +110,7 @@ local function filter_in_lookup(lookup)
 	if table_IsEmpty(lookup) then return filter_none end
 
 	return function(ent)
-		return lookup[ent]
+		return rawget( lookup, ent )
 	end
 end
 
@@ -93,7 +119,7 @@ local function filter_not_in_lookup(lookup)
 	if table_IsEmpty(lookup) then return filter_all end
 
 	return function(ent)
-		return not lookup[ent]
+		return not rwaget( lookup, ent )
 	end
 end
 
@@ -102,7 +128,7 @@ local function filter_function_result_in_lookup(lookup, func)
 	if table_IsEmpty(lookup) then return filter_none end
 
 	return function(ent)
-		return lookup[func(ent)]
+		return rawget( lookup, func(ent) )
 	end
 end
 
@@ -111,7 +137,7 @@ local function filter_function_result_not_in_lookup(lookup, func)
 	if table_IsEmpty(lookup) then return filter_all end
 
 	return function(ent)
-		return not lookup[func(ent)]
+		return not rawget( lookup, func(ent) )
 	end
 end
 
@@ -195,21 +221,21 @@ local function filter_or(...)
 		return f ~= filter_none
 	end)
 
-	local combiner = _filter_or[#args]
+	local combiner = rawget( _filter_or, #args )
 	if not combiner then return nil end -- TODO: write generic combiner
 	return combiner(unpack(args))
 end
 
 local function invalidate_filters(self)
 	-- Update the filters the next time they are used.
-	self.data.findfilter = nil
+	rawset( self.data, "findfilter", nil )
 end
 
 -- This function should be called after the black- or whitelists have changed.
 local function update_filters(self)
 	-- Do not update again until the filters are invalidated the next time.
 
-	local find = self.data.find
+	local find = rawget( self.data, "find" )
 
 	---------------------
 	--    blacklist    --
@@ -221,9 +247,9 @@ local function update_filters(self)
 	local bl_owner_filter = filter_function_result_not_in_lookup(find.bl_owner, function(ent) return getOwner(self,ent) end)
 
 	-- blacklist for models
-	local bl_model_filter = filter_binary_predicate_match_none(find.bl_model, function(ent) return string.lower(ent:GetModel() or "") end, replace_match)
+	local bl_model_filter = filter_binary_predicate_match_none(find.bl_model, function(ent) return stringLower(ent:GetModel() or "") end, replace_match)
 	-- blacklist for classes
-	local bl_class_filter = filter_binary_predicate_match_none(find.bl_class, function(ent) return string.lower(ent:GetClass()) end, replace_match)
+	local bl_class_filter = filter_binary_predicate_match_none(find.bl_class, function(ent) return stringLower(ent:GetClass()) end, replace_match)
 
 	-- combine all blacklist filters (done further down)
 	--local filter_blacklist = filter_and(bl_entity_filter, bl_owner_filter, bl_model_filter, bl_class_filter)
@@ -244,9 +270,9 @@ local function update_filters(self)
 		local wl_owner_filter = filter_function_result_in_lookup(find.wl_owner, function(ent) return getOwner(self,ent) end)
 
 		-- blacklist for models
-		local wl_model_filter = filter_binary_predicate_match_one(find.wl_model, function(ent) return string.lower(ent:GetModel() or "") end, replace_match)
+		local wl_model_filter = filter_binary_predicate_match_one(find.wl_model, function(ent) return stringLower(ent:GetModel() or "") end, replace_match)
 		-- blacklist for classes
-		local wl_class_filter = filter_binary_predicate_match_one(find.wl_class, function(ent) return string.lower(ent:GetClass()) end, replace_match)
+		local wl_class_filter = filter_binary_predicate_match_one(find.wl_class, function(ent) return stringLower(ent:GetClass()) end, replace_match)
 
 		-- combine all whitelist filters
 		filter_whitelist = filter_or(wl_entity_filter, wl_owner_filter, wl_model_filter, wl_class_filter)
@@ -259,14 +285,14 @@ local function update_filters(self)
 end
 
 local function applyFindList(self, findlist)
-	local findfilter = self.data.findfilter
+	local findfilter = rawget( self.data, "findfilter" )
 	if not findfilter then
 		update_filters(self)
-		findfilter = self.data.findfilter
+		findfilter = rawget( self.data, "findfilter" )
 	end
 	filterList(findlist, findfilter)
 
-	self.data.findlist = findlist
+	rawset( self.data, "findlist", findlist )
 	return #findlist
 end
 
@@ -321,25 +347,32 @@ end)
 
 function query_blocked(self, update)
 	if (update) then
-		if (self.data.findcount > 0) then
-			self.data.findcount = self.data.findcount - 1
+	    local findCount = rawget( self.data, "findcount" )
+		if (findCount > 0) then
+			rawset( self.data, "findcount", findCount - 1 )
 			return false
 		else
 			return true
 		end
 	end
-	return (self.data.findcount < 1)
+	return (rawget( self.data, "findcount" ) < 1)
 end
 
 -- Adds to the available find calls
 local delay = 0
 local function addcount()
-	if (delay > CurTime()) then return end
-	delay = CurTime() + findrate()
+    local now = CurTime()
+
+	if (delay > now) then return end
+	delay = now + findrate()
+
+	local maxFindsCount = maxfinds()
 
 	for v,_ in pairs( chiplist ) do
-		if (v and v.findcount and v.findcount < maxfinds()) then
-			v.findcount = v.findcount + 1
+	    local findCount = rawget( v, "findcount" )
+
+		if (v and findCount and findCount < maxFindsCount) then
+			rawset( v, "findcount", findCount + 1 )
 		end
 	end
 end
@@ -359,7 +392,7 @@ end
 
 -- Returns the remaining available find calls
 e2function number findCount()
-	return self.data.findcount
+	return rawget( self.data, "findcount" )
 end
 
 --[[ This function wasn't used
@@ -382,7 +415,7 @@ e2function number findInSphere(vector center, radius)
 	if query_blocked(self, 1) then return 0 end
 	center = Vector(center[1], center[2], center[3])
 
-	return applyFindList(self,ents.FindInSphere(center, radius))
+	return applyFindList(self, FindInSphere(center, radius))
 end
 
 --- Like findInSphere but with a [[http://mathworld.wolfram.com/SphericalCone.html Spherical cone]], arguments are for position, direction, length, and degrees (works now)
@@ -392,21 +425,22 @@ e2function number findInCone(vector position, vector direction, length, degrees)
 	position = Vector(position[1], position[2], position[3])
 	direction = Vector(direction[1], direction[2], direction[3]):GetNormalized()
 
-	local findlist = ents.FindInSphere(position, length)
+	local findlist = FindInSphere(position, length)
 
-	local cosDegrees = math.cos(math.rad(degrees))
+	local cosDegrees = mathCos(mathRad(degrees))
 	local Dot = direction.Dot
 
 	-- update filter and apply it, together with the cone filter. This is an optimization over applying the two filters in separate passes
-	if not self.data.findfilter then update_filters(self) end
+	if not rawget( self.data, "findfilter" ) then update_filters(self) end
+
 	filterList(findlist, filter_and(
-		self.data.findfilter,
+		rawget( self.data, "findfilter" ),
 		function(ent)
 			return Dot(direction, (ent:GetPos() - position):GetNormalized()) > cosDegrees
 		end
 	))
 
-	self.data.findlist = findlist
+	rawset( self.data, "findlist", findlist )
 	return #findlist
 end
 
@@ -415,32 +449,45 @@ e2function number findInBox(vector min, vector max)
 	if query_blocked(self, 1) then return 0 end
 	min = Vector(min[1], min[2], min[3])
 	max = Vector(max[1], max[2], max[3])
-	return applyFindList(self, ents.FindInBox(min, max))
+	return applyFindList(self, FindInBox(min, max))
 end
 
 --- Find all entities with the given name
 e2function number findByName(string name)
 	if query_blocked(self, 1) then return 0 end
-	return applyFindList(self, ents.FindByName(name))
+	return applyFindList(self, FindByName(name))
 end
 
 --- Find all entities with the given model
 e2function number findByModel(string model)
 	if query_blocked(self, 1) then return 0 end
-	return applyFindList(self, ents.FindByModel(model))
+	return applyFindList(self, FindByModel(model))
 end
 
 --- Find all entities with the given class
 e2function number findByClass(string class)
 	if query_blocked(self, 1) then return 0 end
-	return applyFindList(self, ents.FindByClass(class))
+	return applyFindList(self, FindByClass(class))
 end
 
 --[[************************************************************************]]--
 
 local function findPlayer(name)
-	name = string.lower(name)
-	return filterList(player.GetAll(), function(ent) return string.find(string.lower(ent:GetName()), name,1,true) end)[1]
+	name = stringLower(name)
+
+	local plys = allPlayers()
+	local plyCount = #plys
+
+	for i = 1, plyCount do
+	    local ply = rawget( plys, i )
+	    if IsValid( ply ) then
+	        if stringFind( stringLower( ply:GetName() ) ) then
+	            return ply
+            end
+        end
+    end
+
+	--return filterList(allPlayers(), function(ent) return stringFind(stringLower(ent:GetName()), name,1,true) end)[1]
 end
 
 --- Returns the player with the given name, this is an exception to the rule
@@ -452,13 +499,13 @@ end
 --- Returns the player with the given SteamID
 e2function entity findPlayerBySteamID(string id)
 	if query_blocked(self, 1) then return NULL end
-	return player.GetBySteamID(id) or NULL
+	return GetBySteamID(id) or NULL
 end
 
 --- Returns the player with the given SteamID64
 e2function entity findPlayerBySteamID64(string id)
 	if query_blocked(self, 1) then return NULL end
-	return player.GetBySteamID64(id) or NULL
+	return GetBySteamID64(id) or NULL
 end
 
 --[[************************************************************************]]--
@@ -466,20 +513,23 @@ __e2setcost(10)
 
 --- Exclude all entities from <arr> from future finds
 e2function void findExcludeEntities(array arr)
-	local bl_entity = self.data.find.bl_entity
-	local IsValid = IsValid
+	local bl_entity = rawget( rawget( self.data, "find" ), "bl_entity" )
 
-	for _,ent in ipairs(arr) do
+	local arrCount = #arr
+
+	for i = 1, arrCount do
+	    local ent = rawget( arrCount, i )
 		if not IsValid(ent) then return end
-		bl_entity[ent] = true
+		rawset( bl_entity, ent, true )
 	end
+
 	invalidate_filters(self)
 end
 
 --- Exclude <ent> from future finds
 e2function void findExcludeEntity(entity ent)
 	if not IsValid(ent) then return end
-	self.data.find.bl_entity[ent] = true
+	rawset( rawget( rawget( self.data, "find" ), "bl_entity" ), ent, true )
 	invalidate_filters(self)
 end
 
@@ -490,14 +540,14 @@ e2function void findExcludePlayer(entity ply) = e2function void findExcludeEntit
 e2function void findExcludePlayer(string name)
 	local ply = findPlayer(name)
 	if not ply then return end
-	self.data.find.bl_entity[ply] = true
+	rawset( rawget( rawget( self.data, "find" ), "bl_entity" ), ply, true )
 	invalidate_filters(self)
 end
 
 --- Exclude entities owned by this player from future finds
 e2function void findExcludePlayerProps(entity ply)
 	if not IsValid(ply) then return end
-	self.data.find.bl_owner[ply] = true
+	rawset( rawget( rawget( self.data, "find" ), "bl_owner" ), ply, true )
 	invalidate_filters(self)
 end
 
@@ -510,7 +560,7 @@ end
 
 --- Exclude entities with this model (or partial model name) from future finds
 e2function void findExcludeModel(string model)
-	self.data.find.bl_model[string.lower(model)] = true
+	self.data.find.bl_model[stringLower(model)] = true
 	invalidate_filters(self)
 end
 
@@ -527,9 +577,12 @@ e2function void findAllowEntities(array arr)
 	local bl_entity = self.data.find.bl_entity
 	local IsValid = IsValid
 
-	for _,ent in ipairs(arr) do
+	local arrCount = #arr
+
+	for i = 1, arrCount do
+	    local ent = rawget( arr, i )
 		if not IsValid(ent) then return end
-		bl_entity[ent] = nil
+		rawset( bl_entity, ent, nil )
 	end
 	invalidate_filters(self)
 end
@@ -782,41 +835,56 @@ end
 
 --- Returns the indexed entity from the previous find event (valid parameters are 1 to the number of entities found)
 e2function entity findResult(index)
-	return self.data.findlist[index]
+	return rawget( rawget( self.data, "findlist" ), index )
 end
 
 --- Returns the closest entity to the given point from the previous find event
 e2function entity findClosest(vector position)
 	local closest = nil
-	local dist = math.huge
-	self.prf = self.prf + #self.data.findlist * 10
-	for _,ent in pairs(self.data.findlist) do
+	local dist = mathHuge
+
+	local findList = rawget( self.data, "findlist" )
+	local findListCount = #findList
+
+	self.prf = self.prf + findListCount * 10
+
+	for i = 1, findListCount do
+	    local ent = rawget( findList, i )
+
 		if IsValid(ent) then
 			local pos = ent:GetPos()
 			local xd, yd, zd = pos.x-position[1], pos.y-position[2], pos.z-position[3]
 			local curdist = xd*xd + yd*yd + zd*zd
+
 			if curdist < dist then
 				closest = ent
 				dist = curdist
 			end
 		end
 	end
+
 	return closest
 end
 
 --- Formats the query as an array, R:entity(Index) to get a entity, R:string to get a description including the name and entity id.
 e2function array findToArray()
 	local tmp = {}
-	for k,v in ipairs(self.data.findlist) do
-		tmp[k] = v
+
+	local findList = rawget( self.data, "findlist" )
+	local findListCount = #findList
+
+	for i = 1, findListCount do
+	    local v = rawget( findList, i )
+	    rawset( tmp, k, v )
 	end
+
 	self.prf = self.prf + #tmp / 3
 	return tmp
 end
 
 --- Equivalent to findResult(1)
 e2function entity find()
-	return self.data.findlist[1]
+	return rawget( rawget( self.data, "findlist" ), 1 )
 end
 
 --[[************************************************************************]]--
@@ -825,27 +893,33 @@ __e2setcost(10)
 --- Sorts the entities from the last find event, index 1 is the closest to point V, returns the number of entities in the list
 e2function number findSortByDistance(vector position)
 	position = Vector(position[1], position[2], position[3])
-	local findlist = self.data.findlist
-	self.prf = self.prf + #findlist * 12
+
+	local findList = rawget( self.data, "findlist" )
+	local findListCount = #findList
+
+	self.prf = self.prf + findListCount * 12
 
 	local d = {}
-	for i=1, #findlist do
-		local v = findlist[i]
+
+	for i=1, findListCount do
+		local v = rawget( findList, i )
+
 		if v:IsValid() then
-			d[v] = (position - v:GetPos()):LengthSqr()
+			rawset( d, v, (position - v:GetPos()):LengthSqr() )
 		else
-			d[v] = math.huge
+			rawset( d, v, mathHuge )
 		end
+
 	end
-	table.sort(findlist, function(a, b) return d[a] < d[b] end)
-	return #findlist
+	tableSort(findList, function(a, b) return rawget( d, a ) < rawget( d, b ) end)
+	return findListCount
 end
 
 --[[************************************************************************]]--
 __e2setcost(5)
 
 local function applyClip(self, filter)
-	local findlist = self.data.findlist
+	local findlist = rawget( self.data, "findlist" )
 	self.prf = self.prf + #findlist * 5
 
 	filterList(findlist, filter)
@@ -855,68 +929,72 @@ end
 
 --- Filters the list of entities by removing all entities that are NOT of this class
 e2function number findClipToClass(string class)
-	class = string.lower(class)
+	class = stringLower(class)
 	return applyClip(self, function(ent)
-		if !IsValid(ent) then return false end
-		return replace_match(string.lower(ent:GetClass()), class)
+		if not IsValid(ent) then return false end
+		return replace_match(stringLower(ent:GetClass()), class)
 	end)
 end
 
 --- Filters the list of entities by removing all entities that are of this class
 e2function number findClipFromClass(string class)
 	return applyClip(self, function(ent)
-		if !IsValid(ent) then return false end
-		return not replace_match(string.lower(ent:GetClass()), class)
+		if not IsValid(ent) then return false end
+		return not replace_match(stringLower(ent:GetClass()), class)
 	end)
 end
 
 --- Filters the list of entities by removing all entities that do NOT have this model
 e2function number findClipToModel(string model)
 	return applyClip(self, function(ent)
-		if !IsValid(ent) then return false end
-		return replace_match(string.lower(ent:GetModel() or ""), model)
+		if not IsValid(ent) then return false end
+		return replace_match(stringLower(ent:GetModel() or ""), model)
 	end)
 end
 
 --- Filters the list of entities by removing all entities that do have this model
 e2function number findClipFromModel(string model)
 	return applyClip(self, function(ent)
-		if !IsValid(ent) then return false end
-		return not replace_match(string.lower(ent:GetModel() or ""), model)
+		if not IsValid(ent) then return false end
+		return not replace_match(stringLower(ent:GetModel() or ""), model)
 	end)
 end
 
 --- Filters the list of entities by removing all entities that do NOT have this name
 e2function number findClipToName(string name)
 	return applyClip(self, function(ent)
-		if !IsValid(ent) then return false end
-		return replace_match(string.lower(ent:GetName()), name)
+		if not IsValid(ent) then return false end
+		return replace_match(stringLower(ent:GetName()), name)
 	end)
 end
 
 --- Filters the list of entities by removing all entities that do have this name
 e2function number findClipFromName(string name)
 	return applyClip(self, function(ent)
-		if !IsValid(ent) then return false end
-		return not replace_match(string.lower(ent:GetName()), name)
+		if not IsValid(ent) then return false end
+		return not replace_match(stringLower(ent:GetName()), name)
 	end)
 end
 
 --- Filters the list of entities by removing all entities NOT within the specified sphere (center, radius)
 e2function number findClipToSphere(vector center, radius)
 	center = Vector(center[1], center[2], center[3])
+	local radius = radius * radius
+
 	return applyClip(self, function(ent)
-		if !IsValid(ent) then return false end
-		return center:Distance(ent:GetPos()) <= radius
+		if not IsValid(ent) then return false end
+		return center:DistanceSqr(ent:GetPos()) <= radius
 	end)
 end
 
 --- Filters the list of entities by removing all entities within the specified sphere (center, radius)
 e2function number findClipFromSphere(vector center, radius)
 	center = Vector(center[1], center[2], center[3])
+	local radius = radius * radius
+
 	return applyClip(self, function(ent)
-		if !IsValid(ent) then return false end
-		return center:Distance(ent:GetPos()) > radius
+		if not IsValid(ent) then return false end
+		return center:DistanceSqr(ent:GetPos()) > radius
 	end)
 end
 
@@ -928,7 +1006,7 @@ e2function number findClipToRegion(vector origin, vector perpendicular)
 	local perpdot = perpendicular:Dot(origin)
 
 	return applyClip(self, function(ent)
-		if !IsValid(ent) then return false end
+		if not IsValid(ent) then return false end
 		return perpdot < perpendicular:Dot(ent:GetPos())
 	end)
 end
@@ -967,7 +1045,7 @@ e2function number findClipFromBox( vector min, vector max )
 	max = Vector(max[1], max[2], max[3])
 
 	return applyClip( self, function(ent)
-		return !inrange(ent:GetPos(),min,max)
+		return not inrange(ent:GetPos(),min,max)
 	end)
 end
 
@@ -986,7 +1064,7 @@ end
 
 -- Filters the list of entities by removing all entities equal to this entity
 e2function number findClipFromEntity( entity ent )
-	if !IsValid( ent ) then return -1 end
+	if not IsValid( ent ) then return -1 end
 	return applyClip( self, function( ent2 )
 		if !IsValid(ent2) then return false end
 		return ent != ent2
