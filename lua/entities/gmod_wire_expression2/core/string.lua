@@ -7,7 +7,15 @@
 // TODO: these return bad results when used with negative numbers!
 // TODO: benchmarks!
 
+local rawget = rawget
+local rawset = rawset
+
 local string = string -- optimization
+local isstring = isstring
+local tostring = tostring
+local unpack = unpack
+
+local mathMin = math.min
 
 /******************************************************************************/
 
@@ -27,68 +35,68 @@ registerType("string", "s", "",
 __e2setcost(3) -- temporary
 
 registerOperator("ass", "s", "s", function(self, args)
-	local op1, op2, scope = args[2], args[3], args[4]
-	local      rv2 = op2[1](self, op2)
-	self.Scopes[scope][op1] = rv2
-	self.Scopes[scope].vclk[op1] = true
+	local _, op1, op2, scope = unpack( args )
+	local      rv2 = rawget( op2, 1 )(self, op2)
+	rawset( rawget( self.Scopes, scope ), op1, rv2 )
+	rawset( rawget( rawget( self.Scopes, scope ), "vclk" ), op1, true )
 	return rv2
 end)
 
 /******************************************************************************/
 
 registerOperator("is", "s", "n", function(self, args)
-	local op1 = args[2]
-	local rv1 = op1[1](self, op1)
+	local op1 = rawget( args, 2 )
+	local rv1 = rawget( op1, 1 )(self, op1)
 
 	return rv1 ~= "" and 1 or 0
 end)
 
 registerOperator("eq", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
 	return rv1 == rv2 and 1 or 0
 end)
 
 registerOperator("neq", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
 	return rv1 ~= rv2 and 1 or 0
 end)
 
 registerOperator("geq", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
-	self.prf = self.prf + math.min(#rv1, #rv2) / 10
+	self.prf = self.prf + mathMin(#rv1, #rv2) / 10
 
 	return rv1 >= rv2 and 1 or 0
 end)
 
 registerOperator("leq", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
-	self.prf = self.prf + math.min(#rv1, #rv2) / 10
+	self.prf = self.prf + mathMin(#rv1, #rv2) / 10
 
 	return rv1 <= rv2 and 1 or 0
 end)
 
 registerOperator("gth", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
-	self.prf = self.prf + math.min(#rv1, #rv2) / 10
+	self.prf = self.prf + mathMin(#rv1, #rv2) / 10
 
 	return rv1 > rv2 and 1 or 0
 end)
 
 registerOperator("lth", "ss", "n", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
-	self.prf = self.prf + math.min(#rv1, #rv2) / 10
+	self.prf = self.prf + mathMin(#rv1, #rv2) / 10
 
 	return rv1 < rv2 and 1 or 0
 end)
@@ -98,8 +106,8 @@ end)
 __e2setcost(10) -- temporary
 
 registerOperator("add", "ss", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
 	self.prf = self.prf + #rv1*0.01 + #rv2*0.01
 
@@ -109,8 +117,8 @@ end)
 /******************************************************************************/
 
 registerOperator("add", "sn", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
 	self.prf = self.prf + #rv1*0.01
 
@@ -118,8 +126,8 @@ registerOperator("add", "sn", "s", function(self, args)
 end)
 
 registerOperator("add", "ns", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
 	self.prf = self.prf + #rv2*0.01
 
@@ -129,27 +137,27 @@ end)
 /******************************************************************************/
 
 registerOperator("add", "sv", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
 	self.prf = self.prf + #rv1*0.01
 
-	return ("%s[%s,%s,%s]"):format( rv1, rv2[1], rv2[2], rv2[3] )
+	return ("%s[%s,%s,%s]"):format( rv1, rawget( rv2, 1 ), rawget( rv2, 2 ), rawget( rv2, 3 ) )
 end)
 
 registerOperator("add", "vs", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
-	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
+	local _, op1, op2 = unpack( args )
+	local rv1, rv2 = rawget( op1, 1 )(self, op1), rawget( op2, 1 )(self, op2)
 
 	self.prf = self.prf + #rv2*0.01
 
-	return ("[%s,%s,%s]%s"):format( rv1[1],rv1[2],rv1[3],rv2)
+	return ("[%s,%s,%s]%s"):format( rawget( rv1, 1 ),rawget( rv1, 2 ),rawget( rv1, 3 ),rv2)
 end)
 
 /******************************************************************************/
 
 registerOperator("add", "sa", "s", function(self, args)
-	local op1, op2 = args[2], args[3]
+	local _, op1, op2 = unpack( args )
 	local rv1, rv2 = op1[1](self, op1), op2[1](self, op2)
 
 	self.prf = self.prf + #rv1*0.01
