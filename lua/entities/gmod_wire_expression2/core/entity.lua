@@ -18,9 +18,12 @@ registerType("entity", "e", nil,
 /******************************************************************************/
 
 -- import some e2lib functions
-local validPhysics = E2Lib.validPhysics
-local getOwner     = E2Lib.getOwner
-local isOwner      = E2Lib.isOwner
+local validPhysics   = E2Lib.validPhysics
+local getOwner       = E2Lib.getOwner
+local isOwner        = E2Lib.isOwner
+local setMaterial    = E2Lib.setMaterial
+local setSubMaterial = E2Lib.setSubMaterial
+local isNan          = WireLib.isnan
 
 local sun = ents.FindByClass("env_sun")[1] -- used for sunDirection()
 
@@ -43,14 +46,28 @@ registerCallback("e2lib_replace_function", function(funcname, func, oldfunc)
 	end
 end)
 
+local IsValid = IsValid
+local rawget = rawget
+local rawset = rawset
+local type = type
+local pairs = pairs
+local NULL = NULL
+
 -- faster access to some math library functions
 local abs = math.abs
 local atan2 = math.atan2
 local sqrt = math.sqrt
 local asin = math.asin
 local Clamp = math.Clamp
-
 local rad2deg = 180 / math.pi
+
+local stringLower = string.lower
+local stringFind = string.find
+
+local GetByIndex = ents.GetByIndex
+local GetWorld = game.GetWorld
+local StoreEntityModifier = duplicator.StoreEntityModifier
+local gamemodeCall = gamemode.Call
 
 /******************************************************************************/
 
@@ -64,10 +81,10 @@ end
 __e2setcost(5) -- temporary
 
 registerOperator("ass", "e", "e", function(self, args)
-	local op1, op2, scope = args[2], args[3], args[4]
-	local      rv2 = op2[1](self, op2)
-	self.Scopes[scope][op1] = rv2
-	self.Scopes[scope].vclk[op1] = true
+	local op1, op2, scope = rawget( args, 2 ), rawget( args, 3 ), rawget( rrgs, 4 )
+	local      rv2 = rawget( op2, 1 )(self, op2)
+	rawset( rawget( self.Scopes, scope ), op1, rv2 )
+	rawset( rawget( rawget( self.Scopes, scope ), "vclk" ), op1, true )
 	return rv2
 end)
 
@@ -88,7 +105,7 @@ end
 /******************************************************************************/
 
 e2function entity entity(id)
-	local ent = ents.GetByIndex(id)
+	local ent = GetByIndex(id)
 	if not IsValid(ent) then return nil end
 	return ent
 end
@@ -116,7 +133,7 @@ e2function entity noentity()
 end
 
 e2function entity world()
-	return game.GetWorld()
+	return GetWorld()
 end
 
 e2function string entity:name()
@@ -148,10 +165,10 @@ e2function table entity:keyvalues()
 	local size = 0
 	for k,v in pairs( keyvalues ) do
 		size = size + 1
-		ret.s[k] = v
-		ret.stypes[k] = string.lower(type(v)[1]) -- i swear there's a more elegant solution to this but whatever.
+		rawset( rawget( ret, "s" ), k, v )
+		rawset( rawget( ret, "stypes" ), k, stringLower( rawget( type(v), 1 ) ) ) -- i swear there's a more elegant solution to this but whatever.
 	end
-	ret.size = size
+	rawset( ret, "size", ,size )
 	return ret
 end
 
@@ -193,7 +210,7 @@ e2function angle entity:angVel()
 	if not validPhysics(this) then return {0,0,0} end
 	local phys = this:GetPhysicsObject()
 	local vec = phys:GetAngleVelocity()
-	return { vec.y, vec.z, vec.x }
+	return vec:ToTable()
 end
 
 --- Returns a vector describing rotation axis, magnitude and sense given as the vector's direction, magnitude and orientation.
@@ -206,7 +223,7 @@ end
 --- Specific to env_sun because Source is dum. Use this to trace towards the sun or something.
 e2function vector sunDirection()
 	if not IsValid(sun) then return { 0, 0, 0 } end
-	return sun:GetKeyValues().sun_dir
+	return rawget( sun:GetKeyValues(), "sun_dir" )
 end
 
 /******************************************************************************/
@@ -238,14 +255,14 @@ end
 e2function angle entity:toWorld(angle localAngle)
 	if not IsValid(this) then return { 0, 0, 0 } end
 	local worldAngle = this:LocalToWorldAngles(Angle(localAngle[1],localAngle[2],localAngle[3]))
-	return { worldAngle.p, worldAngle.y, worldAngle.r }
+	return worldAngle:ToTable()
 end
 
 --- Transforms from a world angle to an angle local to <this>.
 e2function angle entity:toLocal(angle worldAngle)
 	if not IsValid(this) then return { 0, 0, 0 } end
 	local localAngle = this:WorldToLocalAngles(Angle(worldAngle[1],worldAngle[2],worldAngle[3]))
-	return { localAngle.p, localAngle.y, localAngle.r }
+	return localAngle:ToTable()
 end
 
 /******************************************************************************/
@@ -330,23 +347,25 @@ e2function vector entity:massCenterL()
 end
 
 e2function void setMass(mass)
-	if not validPhysics(self.entity) then return end
-	if WireLib.isnan( mass ) then mass = 50000 end
+    local ent = self.entity
+
+	if not validPhysics( ent ) then return end
+	if isNan( mass ) then mass = 50000 end
 	local mass = Clamp(mass, 0.001, 50000)
-	local phys = self.entity:GetPhysicsObject()
+	local phys = ent:GetPhysicsObject()
 	phys:SetMass(mass)
-	duplicator.StoreEntityModifier(self.entity, "mass", { Mass = mass })
+	duplicator.StoreEntityModifier(ent, "mass", { Mass = mass })
 end
 
 e2function void entity:setMass(mass)
 	if not validPhysics(this) then return end
 	if not isOwner(self, this) then return end
 	if this:IsPlayer() then return end
-	if WireLib.isnan( mass ) then mass = 50000 end
+	if isNan( mass ) then mass = 50000 end
 	local mass = Clamp(mass, 0.001, 50000)
 	local phys = this:GetPhysicsObject()
 	phys:SetMass(mass)
-	duplicator.StoreEntityModifier(this, "mass", { Mass = mass })
+	StoreEntityModifier(this, "mass", { Mass = mass })
 end
 
 e2function number entity:volume()
@@ -380,25 +399,26 @@ e2function table entity:frictionSnapshot()
 	if not validPhysics(this) then return ret end
 
 	local events = this:GetPhysicsObject():GetFrictionSnapshot()
-	for i, event in ipairs(events) do
+	local eventCount = #events
+
+	for i = 1, eventCount do
+	    local event = rawget( events, i )
 		local data = {n={},ntypes={},s={},stypes={},size=0}
 		local size = 0
 
-		for k, v in pairs(event) do
-			if ids[k] then
-				data.s[k] = v
-				data.stypes[k] = ids[k]
-				size = size + 1
-			end
+		for k, idType in pairs(ids) do
+		    rawset( rawget( data, "s" ), k, rawget( event, k ) )
+		    rawset( rawget( data, "stypes" ), k, idType )
+		    size + size + 1
 		end
 
-		data.size = size
-		ret.n[i] = data
-		ret.ntypes[i] = "t"
+		rawset( data, "size", size )
+		rawset( rawget( ret, "n" ), i, data )
+		rawset( rawget( ret, "ntypes" ), i, "t" )
 	end
 
-	ret.size = #events
-	self.prf = self.prf + ret.size * 50
+	rawset( ret, "size", #events )
+	self.prf = self.prf + rawget( rets, "size" ) * 50
 
 	return ret
 end
@@ -450,7 +470,7 @@ end
 e2function angle entity:angles()
 	if not IsValid(this) then return {0,0,0} end
 	local ang = this:GetAngles()
-	return {ang.p,ang.y,ang.r}
+	return { ang.p,ang.y,ang.r }
 end
 
 /******************************************************************************/
@@ -477,13 +497,13 @@ __e2setcost(10)
 e2function void entity:setMaterial(string material)
 	if not IsValid(this) then return end
 	if not isOwner(self, this) then return end
-	E2Lib.setMaterial(this, material)
+	setMaterial(this, material)
 end
 
 e2function void entity:setSubMaterial(index, string material)
 	if not IsValid(this) then return end
 	if not isOwner(self, this) then return end
-	E2Lib.setSubMaterial(this, index-1, material)
+	setSubMaterial(this, index-1, material)
 end
 
 --- Gets <this>'s current skin number.
@@ -496,7 +516,7 @@ end
 e2function void entity:setSkin(skinIndex)
 	if IsValid(this) and not this:IsPlayer()
 	and this:SkinCount() > 0 and skinIndex < this:SkinCount()
-	and gamemode.Call("CanProperty", self.player, "skin", this) then
+	and gamemodeCall("CanProperty", self.player, "skin", this) then
 		this:SetSkin(skinIndex)
 	end
 end
@@ -552,13 +572,13 @@ end
 
 __e2setcost(30) -- temporary
 
-local clamp = WireLib.clampForce
+local clampForce = WireLib.clampForce
 
 e2function void entity:applyForce(vector force)
 	if not validPhysics(this) then return nil end
 	if not isOwner(self, this) then return nil end
 
-	force = clamp(force)
+	force = clampForce(force)
 
 	local phys = this:GetPhysicsObject()
 	phys:ApplyForceCenter(Vector(force[1],force[2],force[3]))
@@ -568,11 +588,14 @@ e2function void entity:applyOffsetForce(vector force, vector position)
 	if not validPhysics(this) then return nil end
 	if not isOwner(self, this) then return nil end
 
-	force 		= clamp(force)
-	position 	= clamp(position)
+	force 		= clampForce(force)
+	position 	= clampForce(position)
 
 	local phys = this:GetPhysicsObject()
-	phys:ApplyForceOffset(Vector(force[1],force[2],force[3]), Vector(position[1],position[2],position[3]))
+	phys:ApplyForceOffset(
+	    Vector(force[1],force[2],force[3]),
+	    Vector(position[1],position[2],position[3])
+	)
 end
 
 e2function void entity:applyAngForce(angle angForce)
@@ -580,7 +603,7 @@ e2function void entity:applyAngForce(angle angForce)
 	if not isOwner(self, this) then return nil end
 
 	if angForce[1] == 0 and angForce[2] == 0 and angForce[3] == 0 then return end
-	angForce = clamp(angForce)
+	angForce = clampForce(angForce)
 
 	local phys = this:GetPhysicsObject()
 
@@ -617,7 +640,7 @@ e2function void entity:applyTorque(vector torque)
 	if not isOwner(self, this) then return end
 
 	if torque[1] == 0 and torque[2] == 0 and torque[3] == 0 then return end
-	torque = clamp(torque)
+	torque = clampForce(torque)
 
 	local phys = this:GetPhysicsObject()
 
@@ -638,8 +661,8 @@ e2function void entity:applyTorque(vector torque)
 
 	local dir = ( tq:Cross(off) ):GetNormal()
 
-	dir = clamp(dir)
-	off = clamp(off)
+	dir = clampForce(dir)
+	off = clampForce(off)
 
 	phys:ApplyForceOffset( dir, off )
 	phys:ApplyForceOffset( dir * -1, off * -1 )
@@ -806,10 +829,10 @@ e2function void entity:removeTrails()
 end
 
 local function composedata(startSize, endSize, length, material, color, alpha)
-	if string.find(material, '"', 1, true) then return nil end
+	if stringFind(material, '"', 1, true) then return nil end
 
-	endSize = math.Clamp( endSize, 0, 128 )
-	startSize = math.Clamp( startSize, 0, 128 )
+	endSize = Clamp( endSize, 0, 128 )
+	startSize = Clamp( startSize, 0, 128 )
 
 	return {
 		Color = Color( color[1], color[2], color[3], alpha ),
@@ -846,8 +869,8 @@ e2function void entity:setTrails(startSize, endSize, length, string material, ve
 	local Data = composedata(startSize, endSize, length, material, color, alpha)
 	if not Data then return end
 
-	Data.AttachmentID = attachmentID
-	Data.Additive = additive ~= 0
+	rawset( Data, "AttachmentID", attachmentID )
+	rawset( Data, "Additive", additive ~= 0 )
 
 	SetTrails(self.player, this, Data)
 end
@@ -867,7 +890,7 @@ e2function vector entity:attachmentPos(attachmentID)
 	if not IsValid(this) then return { 0, 0, 0 } end
 	local attachment = this:GetAttachment(attachmentID)
 	if not attachment then return { 0, 0, 0 } end
-	return attachment.Pos
+	return rawget( attachment, "Pos" )
 end
 
 --- Returns <this>'s attachment angle associated with <attachmentID>
@@ -875,7 +898,7 @@ e2function angle entity:attachmentAng(attachmentID)
 	if not IsValid(this) then return { 0, 0, 0 } end
 	local attachment = this:GetAttachment(attachmentID)
 	if not attachment then return { 0, 0, 0 } end
-	local ang = attachment.Ang
+	local ang = rawget( attachment, "Ang" )
 	return { ang.p, ang.y, ang.r }
 end
 
@@ -884,7 +907,7 @@ e2function vector entity:attachmentPos(string attachmentName)
 	if not IsValid(this) then return { 0, 0, 0 } end
 	local attachment = this:GetAttachment(this:LookupAttachment(attachmentName))
 	if not attachment then return { 0, 0, 0 } end
-	return attachment.Pos
+	return rawget( attachment, "Pos" )
 end
 
 --- Same as <this>:attachmentAng(entity:lookupAttachment(<attachmentName>))
@@ -892,7 +915,7 @@ e2function angle entity:attachmentAng(string attachmentName)
 	if not IsValid(this) then return { 0, 0, 0 } end
 	local attachment = this:GetAttachment(this:LookupAttachment(attachmentName))
 	if not attachment then return { 0, 0, 0 } end
-	local ang = attachment.Ang
+	local ang = rawget( attachment, "Ang" )
 	return { ang.p, ang.y, ang.r }
 end
 
@@ -903,9 +926,12 @@ e2function array entity:attachments()
 	if not IsValid(this) then return {} end
 	local tmp = {}
 	local atc = this:GetAttachments()
-	for i=1, #atc do
-		tmp[i] = atc[i].name
+	local atcCount = #atc
+
+	for i=1, atcCount do
+	    rawset( tmp, i, rawget( rawget( atc, i ), "name") )
 	end
+
 	return tmp
 end
 
