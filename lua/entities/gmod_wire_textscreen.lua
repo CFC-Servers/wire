@@ -93,6 +93,7 @@ if CLIENT then
 	end
 
 	function Layouter:DrawText(text, x, y, w, h, halign, valign)
+	    text = util.FilterText(text, TEXT_FILTER_UNKNOWN, LocalPlayer())
 		self:layout(text, x, y, w, h, halign, valign)
 
 		local offsety = (self.y2-self.y)*valign/2
