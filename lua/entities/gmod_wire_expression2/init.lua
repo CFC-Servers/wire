@@ -83,6 +83,25 @@ function ScopeManager:LoadScopes(Scopes)
 	self.Scope = Scopes[3]
 end
 
+function ENT:GetTickQuotas()
+	local softQuota = e2_softquota
+	local softOverride = hook.Run("Wire_Expression2_SoftQuota", self.player, self, softQuota)
+	if isnumber(softOverride) then softQuota = softOverride end
+
+	local hardQuota = e2_hardquota
+	local hardOverride = hook.Run("Wire_Expression2_HardQuota", self.player, self, hardQuota)
+	if isnumber(hardOverride) then hardQuota = hardOverride end
+
+	return softQuota, hardQuota
+end
+
+function ENT:GetTimeQuota()
+	local timeOverride = hook.Run("Wire_Expression2_TimeQuota", self.player, self, e2_timequota)
+	if isnumber(timeOverride) then return timeOverride end
+
+	return e2_timequota
+end
+
 function ENT:UpdateOverlay(clear)
 	if clear then
 		self:SetOverlayData( {
@@ -188,7 +207,9 @@ function ENT:Execute()
 		self.GlobalScope[k] = fixDefault(wire_expression_types2[var.type][2])
 	end
 
-	if self.context.prfcount + self.context.prf - e2_softquota > e2_hardquota then
+	local softQuota, hardQuota = self:GetTickQuotas()
+
+	if self.context.prfcount + self.context.prf - softQuota > hardQuota then
 		self:Error("Expression 2 (" .. self.name .. "): tick quota exceeded", "hard quota exceeded")
 	end
 
@@ -242,7 +263,9 @@ function ENT:ExecuteEvent(evt, args)
 		self.GlobalScope[k] = fixDefault(wire_expression_types2[var.type][2])
 	end
 
-	if self.context.prfcount + self.context.prf - e2_softquota > e2_hardquota then
+	local softQuota, hardQuota = self:GetTickQuotas()
+
+	if self.context.prfcount + self.context.prf - softQuota > hardQuota then
 		self:Error("Expression 2 (" .. self.name .. "): tick quota exceeded", "hard quota exceeded")
 	end
 
@@ -260,7 +283,8 @@ function ENT:Think()
 		self.context.prfcount = self.context.prfcount + self.context.prf - e2_softquota
 		self.context.timebench = self.context.timebench * 0.95 + self.context.time * 0.05 -- Average it over the last 20 ticks
 
-		if e2_timequota > 0 and self.context.timebench > e2_timequota then
+		local timeQuota = self:GetTimeQuota()
+		if timeQuota > 0 and self.context.timebench > timeQuota then
 			self:Error("Expression 2 (" .. self.name .. "): time quota exceeded", "time quota exceeded")
 			self:Destruct()
 		end
